@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { Outcome } from "@/lib/contracts";
 import { X, TrendingUp, TrendingDown, Loader2, AlertCircle } from "lucide-react";
+import { ethers } from "ethers";
 
 export default function BetModal() {
   const {
@@ -76,13 +77,15 @@ export default function BetModal() {
     return null;
   }
 
-  const totalPool = parseFloat(selectedEvent.totalYesAmount) + parseFloat(selectedEvent.totalNoAmount);
-  const yesPercentage = totalPool > 0 ? (parseFloat(selectedEvent.totalYesAmount) / totalPool) * 100 : 50;
-  const noPercentage = totalPool > 0 ? (parseFloat(selectedEvent.totalNoAmount) / totalPool) * 100 : 50;
+  const yesAmount = parseFloat(ethers.formatUnits(selectedEvent.totalYesBets, 6));
+  const noAmount = parseFloat(ethers.formatUnits(selectedEvent.totalNoBets, 6));
+  const totalPool = yesAmount + noAmount;
+  const yesPercentage = totalPool > 0 ? (yesAmount / totalPool) * 100 : 50;
+  const noPercentage = totalPool > 0 ? (noAmount / totalPool) * 100 : 50;
 
   // Calculate potential winnings (simplified)
-  const currentPool = selectedOutcome === Outcome.Yes ? parseFloat(selectedEvent.totalYesAmount) : parseFloat(selectedEvent.totalNoAmount);
-  const oppositePool = selectedOutcome === Outcome.Yes ? parseFloat(selectedEvent.totalNoAmount) : parseFloat(selectedEvent.totalYesAmount);
+  const currentPool = selectedOutcome === Outcome.Yes ? yesAmount : noAmount;
+  const oppositePool = selectedOutcome === Outcome.Yes ? noAmount : yesAmount;
   const potentialWinnings = amount > 0 ? (amount * (totalPool + amount)) / (currentPool + amount) : 0;
 
   return (
@@ -132,7 +135,7 @@ export default function BetModal() {
                 </div>
                 <div className="text-sm">{yesPercentage.toFixed(1)}%</div>
                 <div className="text-xs mt-1">
-                  {parseFloat(selectedEvent.totalYesAmount).toFixed(2)} USDC
+                  {yesAmount.toFixed(2)} USDC
                 </div>
               </button>
 
@@ -151,7 +154,7 @@ export default function BetModal() {
                 </div>
                 <div className="text-sm">{noPercentage.toFixed(1)}%</div>
                 <div className="text-xs mt-1">
-                  {parseFloat(selectedEvent.totalNoAmount).toFixed(2)} USDC
+                  {noAmount.toFixed(2)} USDC
                 </div>
               </button>
             </div>

@@ -2,6 +2,7 @@ import React from "react";
 import { PredictionEvent, EventStatus, Outcome } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { Calendar, Users, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from "lucide-react";
+import { ethers } from "ethers";
 
 interface EventCardProps {
   event: PredictionEvent;
@@ -11,11 +12,13 @@ export default function EventCard({ event }: EventCardProps) {
   const { setSelectedEvent, setShowBetModal, userBets, loadUserBets } = useAppStore();
   
   const userEventBets = userBets[event.id] || [];
-  const totalUserBets = userEventBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
+  const totalUserBets = userEventBets.reduce((sum, bet) => sum + parseFloat(ethers.formatUnits(bet.amount, 6)), 0);
   
-  const totalPool = parseFloat(event.totalYesAmount) + parseFloat(event.totalNoAmount);
-  const yesPercentage = totalPool > 0 ? (parseFloat(event.totalYesAmount) / totalPool) * 100 : 50;
-  const noPercentage = totalPool > 0 ? (parseFloat(event.totalNoAmount) / totalPool) * 100 : 50;
+  const totalPool = parseFloat(ethers.formatUnits(event.totalYesBets, 6)) + parseFloat(ethers.formatUnits(event.totalNoBets, 6));
+  const yesAmount = parseFloat(ethers.formatUnits(event.totalYesBets, 6));
+  const noAmount = parseFloat(ethers.formatUnits(event.totalNoBets, 6));
+  const yesPercentage = totalPool > 0 ? (yesAmount / totalPool) * 100 : 50;
+  const noPercentage = totalPool > 0 ? (noAmount / totalPool) * 100 : 50;
 
   const getStatusColor = (status: EventStatus) => {
     switch (status) {
@@ -23,8 +26,7 @@ export default function EventCard({ event }: EventCardProps) {
         return "bg-green-500";
       case EventStatus.Resolved:
         return "bg-blue-500";
-      case EventStatus.Cancelled:
-        return "bg-red-500";
+
       default:
         return "bg-gray-500";
     }
@@ -36,15 +38,14 @@ export default function EventCard({ event }: EventCardProps) {
         return "Active";
       case EventStatus.Resolved:
         return "Resolved";
-      case EventStatus.Cancelled:
-        return "Cancelled";
+
       default:
         return "Unknown";
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+  const formatDate = (timestamp: bigint | number) => {
+    return new Date(Number(timestamp) * 1000).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -78,7 +79,7 @@ export default function EventCard({ event }: EventCardProps) {
             </div>
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4" />
-              <span>{event.totalBets} bets</span>
+              <span>Pool: {totalPool.toFixed(2)} USDC</span>
             </div>
           </div>
         </div>
@@ -108,7 +109,7 @@ export default function EventCard({ event }: EventCardProps) {
               <span className="text-sm text-green-400">{yesPercentage.toFixed(1)}%</span>
             </div>
             <div className="text-lg font-semibold text-white">
-              {parseFloat(event.totalYesAmount).toFixed(2)} USDC
+              {yesAmount.toFixed(2)} USDC
             </div>
           </div>
           
@@ -121,7 +122,7 @@ export default function EventCard({ event }: EventCardProps) {
               <span className="text-sm text-red-400">{noPercentage.toFixed(1)}%</span>
             </div>
             <div className="text-lg font-semibold text-white">
-              {parseFloat(event.totalNoAmount).toFixed(2)} USDC
+              {noAmount.toFixed(2)} USDC
             </div>
           </div>
         </div>
@@ -146,13 +147,13 @@ export default function EventCard({ event }: EventCardProps) {
       {isResolved && (
         <div className="mb-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
           <div className="flex items-center space-x-2">
-            {event.outcome === Outcome.Yes ? (
+            {event.result === Outcome.Yes ? (
               <CheckCircle className="h-5 w-5 text-green-400" />
             ) : (
               <XCircle className="h-5 w-5 text-red-400" />
             )}
             <span className="text-sm text-blue-300">
-              Resolved: {event.outcome === Outcome.Yes ? "YES" : "NO"}
+              Resolved: {event.result === Outcome.Yes ? "YES" : "NO"}
             </span>
           </div>
         </div>

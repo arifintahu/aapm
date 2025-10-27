@@ -14,6 +14,12 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
+  define: {
+    global: 'globalThis',
+  },
+  optimizeDeps: {
+    include: ['buffer'],
+  },
   server: {
     proxy: {
       '/api': {

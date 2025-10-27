@@ -59,6 +59,7 @@ export enum Outcome {
 
 // Types
 export interface PredictionEvent {
+  id: number;
   question: string;
   endTime: bigint;
   status: EventStatus;
@@ -145,16 +146,16 @@ export class ContractService {
     if (!this.predictionMarketContract) {
       throw new Error("Prediction market contract not initialized");
     }
-
-    const event = await this.predictionMarketContract.getEvent(eventId);
+    const event = await this.predictionMarketContract.getEvent(eventId.toString());
     return {
-      question: event.question,
-      endTime: event.endTime,
-      status: event.status,
-      result: event.result,
-      totalYesBets: event.totalYesBets,
-      totalNoBets: event.totalNoBets,
-      totalPool: event.totalPool,
+      id: eventId,
+      question: event[0],
+      endTime: event[1],
+      status: event[2],
+      result: event[3],
+      totalYesBets: event[4],
+      totalNoBets: event[5],
+      totalPool: event[6],
     };
   }
 
@@ -209,6 +210,16 @@ export class ContractService {
     }
 
     const tx = await this.predictionMarketContract.claimWinnings(eventId);
+    await tx.wait();
+    return tx.hash;
+  }
+
+  async createEvent(question: string, duration: number): Promise<string> {
+    if (!this.predictionMarketContract) {
+      throw new Error("Prediction market contract not initialized");
+    }
+
+    const tx = await this.predictionMarketContract.createEvent(question, duration);
     await tx.wait();
     return tx.hash;
   }

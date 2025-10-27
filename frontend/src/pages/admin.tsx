@@ -13,6 +13,7 @@ import {
   Loader2,
   AlertCircle 
 } from "lucide-react";
+import { ethers } from "ethers";
 
 export default function AdminPage() {
   const { isAuthenticated, user, events, loadEvents } = useAppStore();
@@ -85,8 +86,8 @@ export default function AdminPage() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleString();
+  const formatDate = (timestamp: bigint | number) => {
+    return new Date(Number(timestamp) * 1000).toLocaleString();
   };
 
   const getMinDateTime = () => {
@@ -145,10 +146,12 @@ export default function AdminPage() {
           {events.length > 0 ? (
             <div className="grid gap-6">
               {events.map((event) => {
-                const totalPool = parseFloat(event.totalYesAmount) + parseFloat(event.totalNoAmount);
+                const yesAmount = parseFloat(ethers.formatUnits(event.totalYesBets, 6));
+                const noAmount = parseFloat(ethers.formatUnits(event.totalNoBets, 6));
+                const totalPool = yesAmount + noAmount;
                 const isActive = event.status === EventStatus.Active;
                 const isResolved = event.status === EventStatus.Resolved;
-                const canResolve = isActive && Date.now() / 1000 > event.endTime;
+                const canResolve = isActive && Date.now() / 1000 > Number(event.endTime);
                 
                 return (
                   <div
@@ -167,7 +170,7 @@ export default function AdminPage() {
                           </div>
                           <div className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
-                            <span>{event.totalBets} bets</span>
+                            <span>Pool: {totalPool.toFixed(2)} USDC</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <DollarSign className="h-4 w-4" />
@@ -189,13 +192,13 @@ export default function AdminPage() {
                       <div className="bg-green-500/20 rounded-lg p-3 border border-green-500/30">
                         <div className="text-sm text-green-400 mb-1">YES Bets</div>
                         <div className="text-lg font-semibold text-white">
-                          {parseFloat(event.totalYesAmount).toFixed(2)} USDC
+                          {yesAmount.toFixed(2)} USDC
                         </div>
                       </div>
                       <div className="bg-red-500/20 rounded-lg p-3 border border-red-500/30">
                         <div className="text-sm text-red-400 mb-1">NO Bets</div>
                         <div className="text-lg font-semibold text-white">
-                          {parseFloat(event.totalNoAmount).toFixed(2)} USDC
+                          {noAmount.toFixed(2)} USDC
                         </div>
                       </div>
                     </div>
@@ -204,13 +207,13 @@ export default function AdminPage() {
                     {isResolved && (
                       <div className="mb-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
                         <div className="flex items-center space-x-2">
-                          {event.outcome === Outcome.Yes ? (
+                          {event.result === Outcome.Yes ? (
                             <CheckCircle className="h-5 w-5 text-green-400" />
                           ) : (
                             <XCircle className="h-5 w-5 text-red-400" />
                           )}
                           <span className="text-blue-300">
-                            Resolved: {event.outcome === Outcome.Yes ? "YES" : "NO"}
+                            Resolved: {event.result === Outcome.Yes ? "YES" : "NO"}
                           </span>
                         </div>
                       </div>
