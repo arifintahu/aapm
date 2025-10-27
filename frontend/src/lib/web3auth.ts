@@ -3,17 +3,17 @@ import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
 
-const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID || "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ";
+const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID;
 
-const chainConfig = {
+export const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: "0xaa36a7", // Sepolia testnet
-  rpcTarget: "https://rpc.sepolia.org",
-  displayName: "Sepolia Testnet",
-  blockExplorerUrl: "https://sepolia.etherscan.io/",
-  ticker: "ETH",
-  tickerName: "Ethereum",
-  logo: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+  chainId: import.meta.env.VITE_CHAIN_ID,
+  rpcTarget: import.meta.env.VITE_CHAIN_RPC_URL,
+  displayName: import.meta.env.VITE_CHAIN_NETWORK_NAME,
+  blockExplorerUrl: import.meta.env.VITE_CHAIN_BLOCK_EXPLORER_URL,
+  ticker: import.meta.env.VITE_CHAIN_TICKER,
+  tickerName: import.meta.env.VITE_CHAIN_TICKER_NAME,
+  logo: import.meta.env.VITE_CHAIN_LOGO_URL,
 };
 
 const privateKeyProvider = new EthereumPrivateKeyProvider({

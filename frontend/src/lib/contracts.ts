@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { chainConfig } from "./web3auth";
 
 // Contract ABIs (simplified versions)
 export const PREDICTION_MARKET_ABI = [
@@ -39,10 +40,10 @@ export const CONTRACT_ADDRESSES = {
 
 // Network configuration
 export const NETWORK_CONFIG = {
-  chainId: parseInt(import.meta.env.VITE_CHAIN_ID || "11155111"),
-  name: import.meta.env.VITE_NETWORK_NAME || "sepolia",
-  rpcUrl: "https://rpc.sepolia.org",
-  blockExplorer: "https://sepolia.etherscan.io",
+  chainId: chainConfig.chainId,
+  name: chainConfig.displayName,
+  rpcUrl: chainConfig.rpcTarget,
+  blockExplorer: chainConfig.blockExplorerUrl,
 };
 
 // Enums

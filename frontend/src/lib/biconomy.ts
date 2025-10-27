@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { IProvider } from "@web3auth/base";
+import { chainConfig } from "./web3auth";
 
 // Note: We'll implement a simplified version without Biconomy SDK for now
 // This can be enhanced later with the actual Biconomy SDK when available
@@ -17,9 +18,9 @@ export class BiconomyService {
   private readonly paymasterUrl: string;
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_BICONOMY_API_KEY || "mee_HyuMB2qUBrJLXeEt536uP7";
-    this.bundlerUrl = `https://bundler.biconomy.io/api/v2/11155111/${this.apiKey}`;
-    this.paymasterUrl = `https://paymaster.biconomy.io/api/v1/11155111/${this.apiKey}`;
+    this.apiKey = import.meta.env.VITE_BICONOMY_API_KEY;
+    this.bundlerUrl = `https://bundler.biconomy.io/api/v2/${chainConfig.chainId}/${this.apiKey}`;
+    this.paymasterUrl = `https://paymaster.biconomy.io/api/v1/${chainConfig.chainId}/${this.apiKey}`;
   }
 
   async createSmartAccount(web3AuthProvider: IProvider): Promise<SmartAccount> {
@@ -30,7 +31,7 @@ export class BiconomyService {
       }) as string;
 
       // Create ethers provider and signer
-      const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
+      const provider = new ethers.JsonRpcProvider(chainConfig.rpcTarget);
       const signer = new ethers.Wallet(privateKey, provider);
 
       // For now, we'll use the EOA address directly

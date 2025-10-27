@@ -3,7 +3,6 @@ import { IProvider } from "@web3auth/base";
 import { web3AuthService } from "./web3auth";
 import { biconomyService, SmartAccount } from "./biconomy";
 import { contractService, PredictionEvent, UserBet, Outcome } from "./contracts";
-import { ethers } from "ethers";
 
 interface User {
   address: string;
