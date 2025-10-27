@@ -1,67 +1,125 @@
-/**
- * This is a API server
- */
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import authRoutes from './routes/auth.js';
+import eventsRoutes from './routes/events.js';
+import bettingRoutes from './routes/betting.js';
+import { logger, loggerStream } from './utils/logger.js';
 
-import express, {
-  type Request,
-  type Response,
-  type NextFunction,
-} from 'express'
-import cors from 'cors'
-import path from 'path'
-import dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-import authRoutes from './routes/auth.js'
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
+// Force restart to pick up new port - updated to 4000
 
-// for esm mode
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const app = express();
+const PORT = process.env.PORT || 3001;
 
-// load env
-dotenv.config()
+// Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
-const app: express.Application = express()
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use(cors())
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+// HTTP request logging
+app.use(morgan('combined', { stream: loggerStream }));
 
-/**
- * API Routes
- */
-app.use('/api/auth', authRoutes)
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/events', eventsRoutes);
+app.use('/api/betting', bettingRoutes);
 
-/**
- * health
- */
-app.use(
-  '/api/health',
-  (req: Request, res: Response, next: NextFunction): void => {
-    res.status(200).json({
-      success: true,
-      message: 'ok',
-    })
-  },
-)
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+  });
+});
 
-/**
- * error handler middleware
- */
-app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
-  res.status(500).json({
+// API info endpoint
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'Gasless Prediction Market API',
+    version: '1.0.0',
+    description: 'Backend API for gasless prediction market betting platform',
+    endpoints: {
+      auth: '/api/auth',
+      events: '/api/events',
+      betting: '/api/betting',
+      health: '/api/health',
+    },
+    documentation: 'https://github.com/your-repo/api-docs',
+  });
+});
+
+// Global error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('Unhandled error:', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+  });
+
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  res.status(err.status || 500).json({
     success: false,
-    error: 'Server internal error',
-  })
-})
+    error: isDevelopment ? err.message : 'Internal server error',
+    ...(isDevelopment && { stack: err.stack }),
+  });
+});
 
-/**
- * 404 handler
- */
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
+// 404 handler
+app.use('*', (req, res) => {
+  logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+  });
+  
+  res.status(404).json({ 
     success: false,
-    error: 'API not found',
-  })
-})
+    error: 'Route not found',
+    path: req.originalUrl,
+    method: req.method,
+  });
+});
 
-export default app
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
+});
+
+// Start server
+app.listen(PORT, () => {
+  logger.info(`🚀 Server running on port ${PORT}`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+  });
+  
+  logger.info('📊 API endpoints available:', {
+    auth: `http://localhost:${PORT}/api/auth`,
+    events: `http://localhost:${PORT}/api/events`,
+    betting: `http://localhost:${PORT}/api/betting`,
+    health: `http://localhost:${PORT}/api/health`,
+  });
+});
+
+export default app;
