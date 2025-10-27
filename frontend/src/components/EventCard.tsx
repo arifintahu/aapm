@@ -1,0 +1,197 @@
+import React from "react";
+import { PredictionEvent, EventStatus, Outcome } from "@/lib/contracts";
+import { useAppStore } from "@/lib/store";
+import { Calendar, Users, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from "lucide-react";
+
+interface EventCardProps {
+  event: PredictionEvent;
+}
+
+export default function EventCard({ event }: EventCardProps) {
+  const { setSelectedEvent, setShowBetModal, userBets, loadUserBets } = useAppStore();
+  
+  const userEventBets = userBets[event.id] || [];
+  const totalUserBets = userEventBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
+  
+  const totalPool = parseFloat(event.totalYesAmount) + parseFloat(event.totalNoAmount);
+  const yesPercentage = totalPool > 0 ? (parseFloat(event.totalYesAmount) / totalPool) * 100 : 50;
+  const noPercentage = totalPool > 0 ? (parseFloat(event.totalNoAmount) / totalPool) * 100 : 50;
+
+  const getStatusColor = (status: EventStatus) => {
+    switch (status) {
+      case EventStatus.Active:
+        return "bg-green-500";
+      case EventStatus.Resolved:
+        return "bg-blue-500";
+      case EventStatus.Cancelled:
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusText = (status: EventStatus) => {
+    switch (status) {
+      case EventStatus.Active:
+        return "Active";
+      case EventStatus.Resolved:
+        return "Resolved";
+      case EventStatus.Cancelled:
+        return "Cancelled";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const handleBetClick = () => {
+    setSelectedEvent(event.id);
+    setShowBetModal(true);
+    loadUserBets(event.id);
+  };
+
+  const canBet = event.status === EventStatus.Active && Date.now() / 1000 < event.endTime;
+  const isResolved = event.status === EventStatus.Resolved;
+  const hasUserBets = userEventBets.length > 0;
+
+  return (
+    <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-200">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
+            {event.question}
+          </h3>
+          <div className="flex items-center space-x-4 text-sm text-gray-300">
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-4 w-4" />
+              <span>Ends: {formatDate(event.endTime)}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Users className="h-4 w-4" />
+              <span>{event.totalBets} bets</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(event.status)}`}>
+          {getStatusText(event.status)}
+        </div>
+      </div>
+
+      {/* Pool Information */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-300">Total Pool</span>
+          <span className="text-lg font-semibold text-white">
+            {totalPool.toFixed(2)} USDC
+          </span>
+        </div>
+        
+        {/* Odds Display */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-green-500/20 rounded-lg p-3 border border-green-500/30">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center space-x-1">
+                <TrendingUp className="h-4 w-4 text-green-400" />
+                <span className="text-sm font-medium text-green-400">YES</span>
+              </div>
+              <span className="text-sm text-green-400">{yesPercentage.toFixed(1)}%</span>
+            </div>
+            <div className="text-lg font-semibold text-white">
+              {parseFloat(event.totalYesAmount).toFixed(2)} USDC
+            </div>
+          </div>
+          
+          <div className="bg-red-500/20 rounded-lg p-3 border border-red-500/30">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center space-x-1">
+                <TrendingDown className="h-4 w-4 text-red-400" />
+                <span className="text-sm font-medium text-red-400">NO</span>
+              </div>
+              <span className="text-sm text-red-400">{noPercentage.toFixed(1)}%</span>
+            </div>
+            <div className="text-lg font-semibold text-white">
+              {parseFloat(event.totalNoAmount).toFixed(2)} USDC
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* User Bets */}
+      {hasUserBets && (
+        <div className="mb-4 p-3 bg-purple-500/20 rounded-lg border border-purple-500/30">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-purple-300">Your Total Bets</span>
+            <span className="font-semibold text-purple-200">
+              {totalUserBets.toFixed(2)} USDC
+            </span>
+          </div>
+          <div className="text-xs text-purple-300 mt-1">
+            {userEventBets.length} bet{userEventBets.length !== 1 ? "s" : ""}
+          </div>
+        </div>
+      )}
+
+      {/* Resolution Result */}
+      {isResolved && (
+        <div className="mb-4 p-3 bg-blue-500/20 rounded-lg border border-blue-500/30">
+          <div className="flex items-center space-x-2">
+            {event.outcome === Outcome.Yes ? (
+              <CheckCircle className="h-5 w-5 text-green-400" />
+            ) : (
+              <XCircle className="h-5 w-5 text-red-400" />
+            )}
+            <span className="text-sm text-blue-300">
+              Resolved: {event.outcome === Outcome.Yes ? "YES" : "NO"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Action Button */}
+      <div className="flex space-x-3">
+        {canBet ? (
+          <button
+            onClick={handleBetClick}
+            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
+          >
+            Place Bet
+          </button>
+        ) : event.status === EventStatus.Active ? (
+          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center">
+            <div className="flex items-center justify-center space-x-1">
+              <Clock className="h-4 w-4" />
+              <span>Betting Closed</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center">
+            Event Ended
+          </div>
+        )}
+        
+        {hasUserBets && isResolved && (
+          <button
+            onClick={() => {
+              // This would trigger claim winnings
+              console.log("Claim winnings for event", event.id);
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+          >
+            Claim
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
