@@ -11,6 +11,10 @@
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "query-events": "hardhat run scripts/query-events.ts --network sepolia",
     "query-events:localhost": "hardhat run scripts/query-events.ts --network localhost",
+    "create-event": "hardhat run scripts/create-event.ts --network sepolia",
+    "create-event:localhost": "hardhat run scripts/create-event.ts --network localhost",
+    "place-bet": "hardhat run scripts/place-bet.ts --network sepolia",
+    "place-bet:localhost": "hardhat run scripts/place-bet.ts --network localhost",
     "node": "hardhat node",
     "clean": "hardhat clean"
   },

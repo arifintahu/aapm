@@ -114,7 +114,7 @@ async function getEventLogs() {
     console.log(`\n📝 EventCreated logs (${eventCreatedLogs.length}):`);
     for (const log of eventCreatedLogs) {
       const args = (log as any).args;
-      console.log(`  Event ID: ${args.eventSWSId.toString()}`);
+      console.log(`  Event ID: ${args.eventId.toString()}`);
       console.log(`  Question: ${args.question}`);
       console.log(`  End Time: ${new Date(Number(args.endTime) * 1000).toLocaleString()}`);
       console.log(`  Creator: ${args.creator}`);
