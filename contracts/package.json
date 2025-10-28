@@ -30,6 +30,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "aapm-workspace": "file:.."
+    "aapm-workspace": "file:..",
+    "dotenv": "^17.2.3"
   }
 }

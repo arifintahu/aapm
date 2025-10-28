@@ -1,41 +1,11 @@
 import { ethers } from "ethers";
 import { chainConfig } from "./web3auth";
+import { PREDICTION_MARKET_ABI, MOCK_USDC_ABI } from "./contract-abis";
 
-// Contract ABIs (simplified versions)
-export const PREDICTION_MARKET_ABI = [
-  "function createEvent(string memory question, uint256 duration) external",
-  "function placeBet(uint256 eventId, uint8 prediction, uint256 amount) external",
-  "function resolveEvent(uint256 eventId, uint8 result) external",
-  "function claimWinnings(uint256 eventId) external",
-  "function getEvent(uint256 eventId) external view returns (tuple(string question, uint256 endTime, uint8 status, uint8 result, uint256 totalYesBets, uint256 totalNoBets, uint256 totalPool))",
-  "function getUserEventBets(uint256 eventId, address user) external view returns (tuple(uint256 eventId, address bettor, uint8 prediction, uint256 amount, bool claimed)[])",
-  "function getEventBetCount(uint256 eventId) external view returns (uint256)",
-  "function calculatePotentialWinnings(uint256 eventId, uint8 prediction, uint256 amount) external view returns (uint256)",
-  "function eventCounter() external view returns (uint256)",
-  "event EventCreated(uint256 indexed eventId, string question, uint256 endTime)",
-  "event BetPlaced(uint256 indexed eventId, address indexed bettor, uint8 prediction, uint256 amount)",
-  "event EventResolved(uint256 indexed eventId, uint8 result)",
-  "event WinningsClaimed(uint256 indexed eventId, address indexed winner, uint256 amount)"
-];
-
-export const MOCK_USDC_ABI = [
-  "function balanceOf(address account) external view returns (uint256)",
-  "function transfer(address to, uint256 amount) external returns (bool)",
-  "function approve(address spender, uint256 amount) external returns (bool)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function mint(address to, uint256 amount) external",
-  "function faucet() external",
-  "function decimals() external view returns (uint8)",
-  "function symbol() external view returns (string)",
-  "function name() external view returns (string)",
-  "event Transfer(address indexed from, address indexed to, uint256 value)",
-  "event Approval(address indexed owner, address indexed spender, uint256 value)"
-];
-
-// Contract addresses (will be updated after deployment)
+// Contract addresses - deployed on Sepolia testnet
 export const CONTRACT_ADDRESSES = {
-  PREDICTION_MARKET: import.meta.env.VITE_PREDICTION_MARKET_ADDRESS || "",
-  MOCK_USDC: import.meta.env.VITE_MOCK_USDC_ADDRESS || "",
+  PREDICTION_MARKET: import.meta.env.VITE_PREDICTION_MARKET_ADDRESS || "0x24fFEAc69FE7CAcb45c7a39D0995618428205a6F",
+  MOCK_USDC: import.meta.env.VITE_MOCK_USDC_ADDRESS || "0xed3725F43893A72D8B940b6414eE10F4A570A769",
 };
 
 // Network configuration

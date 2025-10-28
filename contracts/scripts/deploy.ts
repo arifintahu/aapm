@@ -54,9 +54,10 @@ async function main() {
   console.log("Deployer:", deployer.address);
 
   // Save deployment addresses to a file
+  const network = await ethers.provider.getNetwork();
   const deploymentInfo = {
-    network: (await ethers.provider.getNetwork()).name,
-    chainId: (await ethers.provider.getNetwork()).chainId,
+    network: network.name,
+    chainId: network.chainId.toString(), // Convert BigInt to string
     deployer: deployer.address,
     contracts: {
       MockUSDC: mockUSDCAddress,

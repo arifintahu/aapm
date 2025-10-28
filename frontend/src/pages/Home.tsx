@@ -1,11 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import LoginButton from "@/components/LoginButton";
 import Layout from "@/components/Layout";
 import EventCard from "@/components/EventCard";
 import WalletModal from "@/components/WalletModal";
 import BetModal from "@/components/BetModal";
-import { Loader2, TrendingUp } from "lucide-react";
+import { CreateEventModal } from "@/components/CreateEventModal";
+import { Loader2, TrendingUp, Plus } from "lucide-react";
 
 export default function Home() {
   const { 
@@ -17,6 +18,8 @@ export default function Home() {
     isLoading 
   } = useAppStore();
 
+  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+
   useEffect(() => {
     initialize();
   }, [initialize]);
@@ -26,6 +29,10 @@ export default function Home() {
       loadEvents();
     }
   }, [isAuthenticated, loadEvents]);
+
+  const handleEventCreated = () => {
+    loadEvents(); // Refresh events after creating a new one
+  };
 
   // Show loading spinner during initialization
   if (isInitializing) {
@@ -68,9 +75,18 @@ export default function Home() {
               <TrendingUp className="h-6 w-6 mr-2 text-purple-400" />
               Active Events
             </h2>
-            {isLoading && (
-              <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
-            )}
+            <div className="flex items-center space-x-4">
+              {isLoading && (
+                <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+              )}
+              <button
+                onClick={() => setShowCreateEventModal(true)}
+                className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Event</span>
+              </button>
+            </div>
           </div>
 
           {events.length === 0 ? (
@@ -94,6 +110,11 @@ export default function Home() {
       {/* Modals */}
       <WalletModal />
       <BetModal />
+      <CreateEventModal 
+        isOpen={showCreateEventModal}
+        onClose={() => setShowCreateEventModal(false)}
+        onEventCreated={handleEventCreated}
+      />
     </Layout>
   );
 }
