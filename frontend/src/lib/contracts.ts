@@ -117,16 +117,17 @@ export class ContractService {
     if (!this.predictionMarketContract) {
       throw new Error("Prediction market contract not initialized");
     }
-    const event = await this.predictionMarketContract.getEvent(eventId.toString());
+    // Use the events mapping directly like in the contract scripts
+    const event = await this.predictionMarketContract.events(eventId);
     return {
       id: eventId,
-      question: event[0],
-      endTime: event[1],
-      status: event[2],
-      result: event[3],
-      totalYesBets: event[4],
-      totalNoBets: event[5],
-      totalPool: event[6],
+      question: event.question,
+      endTime: event.endTime,
+      status: event.status,
+      result: event.result,
+      totalYesBets: event.totalYesBets,
+      totalNoBets: event.totalNoBets,
+      totalPool: event.totalPool,
     };
   }
 

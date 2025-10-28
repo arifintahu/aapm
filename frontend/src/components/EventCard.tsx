@@ -33,10 +33,10 @@ export default function EventCard({ event }: EventCardProps) {
   };
 
   const getStatusText = (status: EventStatus) => {
-    switch (status) {
-      case EventStatus.Active:
+    switch (status.toString()) {
+      case EventStatus.Active.toString():
         return "Active";
-      case EventStatus.Resolved:
+      case EventStatus.Resolved.toString():
         return "Resolved";
 
       default:
@@ -60,32 +60,36 @@ export default function EventCard({ event }: EventCardProps) {
     loadUserBets(event.id);
   };
 
-  const canBet = event.status === EventStatus.Active && Date.now() / 1000 < event.endTime;
-  const isResolved = event.status === EventStatus.Resolved;
+  const currentTime = BigInt(Math.round(Date.now() / 1000));
+  const canBet = event.status == EventStatus.Active && currentTime < event.endTime;
+  const isResolved = event.status == EventStatus.Resolved;
   const hasUserBets = userEventBets.length > 0;
 
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-200">
       {/* Header */}
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2">
-            {event.question}
-          </h3>
-          <div className="flex items-center space-x-4 text-sm text-gray-300">
-            <div className="flex items-center space-x-1">
-              <Calendar className="h-4 w-4" />
-              <span>Ends: {formatDate(event.endTime)}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Users className="h-4 w-4" />
-              <span>Pool: {totalPool.toFixed(2)} USDC</span>
-            </div>
+      <div className="mb-4">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 pr-3 min-h-[3.5rem]">
+            <h3 className="text-lg font-semibold text-white mb-0 line-clamp-2 leading-tight break-words">
+              {event.question}
+            </h3>
+          </div>
+          
+          <div className={`px-3 py-1 rounded-full text-xs font-medium text-white flex-shrink-0 self-start ${getStatusColor(event.status)}`}>
+            {getStatusText(event.status)}
           </div>
         </div>
         
-        <div className={`px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(event.status)}`}>
-          {getStatusText(event.status)}
+        <div className="flex items-center space-x-4 text-sm text-gray-300 flex-wrap">
+          <div className="flex items-center space-x-1">
+            <Calendar className="h-4 w-4" />
+            <span>Ends: {formatDate(event.endTime)}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Users className="h-4 w-4" />
+            <span>Pool: {totalPool.toFixed(2)} USDC</span>
+          </div>
         </div>
       </div>
 
