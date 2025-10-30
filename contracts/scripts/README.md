@@ -7,15 +7,19 @@ Interactive scripts for the complete PredictionMarket workflow.
 ```bash
 # 1. Deploy contracts
 npm run deploy:sepolia
+npm run deploy:bscTestnet
 
 # 2. Create event
-QUESTION="Will AI achieve AGI by 2025?" DURATION_DAYS="90" npm run create-event
+QUESTION="Will AI achieve AGI by 2025?" DURATION_DAYS="90" npm run create-event:sepolia
+QUESTION="Will AI achieve AGI by 2025?" DURATION_DAYS="90" npm run create-event:bscTestnet
 
 # 3. Place bet
-EVENT_ID="0" PREDICTION="yes" BET_AMOUNT="25" npm run place-bet
+EVENT_ID="0" PREDICTION="yes" BET_AMOUNT="25" npm run place-bet:sepolia
+EVENT_ID="0" PREDICTION="yes" BET_AMOUNT="25" npm run place-bet:bscTestnet
 
 # 4. Query events
-npm run query-events
+npm run query-events:sepolia
+npm run query-events:bscTestnet
 ```
 
 ## 📋 Available Scripts
@@ -23,9 +27,12 @@ npm run query-events
 ### Main Commands
 - `npm run deploy:sepolia` - Deploy to Sepolia testnet
 - `npm run deploy:localhost` - Deploy to localhost
-- `npm run create-event` - Create prediction event
-- `npm run place-bet` - Place bet on event
-- `npm run query-events` - Query all events
+- `npm run create-event:sepolia` - Create prediction event on Sepolia
+- `npm run create-event:bscTestnet` - Create prediction event on BSC Testnet
+- `npm run place-bet:sepolia` - Place bet on event on Sepolia
+- `npm run place-bet:bscTestnet` - Place bet on event on BSC Testnet
+- `npm run query-events:sepolia` - Query all events on Sepolia
+- `npm run query-events:bscTestnet` - Query all events on BSC Testnet
 
 ### Development
 - `npm run node` - Start local Hardhat network
