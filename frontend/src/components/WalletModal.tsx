@@ -1,6 +1,7 @@
 import React from "react";
 import { useAppStore } from "@/lib/store";
 import { X, Copy, ExternalLink, Droplets, Loader2, CheckCircle } from "lucide-react";
+import { chainConfig } from "@/lib/web3auth";
 
 export default function WalletModal() {
   const {
@@ -40,7 +41,7 @@ export default function WalletModal() {
 
   const handleViewOnExplorer = () => {
     if (user?.address) {
-      window.open(`https://sepolia.etherscan.io/address/${user.address}`, '_blank');
+      window.open(`${chainConfig.blockExplorerUrl}/address/${user.address}`, '_blank');
     }
   };
 
@@ -129,7 +130,7 @@ export default function WalletModal() {
                   {balance.toFixed(2)}
                 </div>
                 <div className="text-sm text-gray-400">
-                  Sepolia Testnet
+                  {chainConfig.displayName}
                 </div>
               </div>
             </div>
@@ -171,15 +172,11 @@ export default function WalletModal() {
             <div className="space-y-1 text-sm text-gray-300">
               <div className="flex justify-between">
                 <span>Network:</span>
-                <span>Sepolia Testnet</span>
+                <span>{chainConfig.displayName}</span>
               </div>
               <div className="flex justify-between">
                 <span>Chain ID:</span>
-                <span>11155111</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Account Type:</span>
-                <span>Smart Account</span>
+                <span>{chainConfig.chainId}</span>
               </div>
             </div>
           </div>
