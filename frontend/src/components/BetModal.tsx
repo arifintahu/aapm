@@ -253,11 +253,6 @@ export default function BetModal() {
               )}
             </button>
           </div>
-
-          {/* Gasless Info */}
-          <div className="text-center text-xs text-gray-400">
-            ⚡ This transaction is gasless - no ETH required!
-          </div>
         </div>
       </div>
     </div>
