@@ -55,7 +55,7 @@ export default function LoginButton() {
           <div className="space-y-3">
             <h2 className="text-2xl font-semibold text-white">Get Started</h2>
             <p className="text-gray-300">
-              Connect with your Google account to start betting on prediction markets
+              Connect with Google or MetaMask to start betting on prediction markets
             </p>
           </div>
 
@@ -72,7 +72,7 @@ export default function LoginButton() {
             ) : (
               <>
                 <LogIn className="h-5 w-5" />
-                <span>Connect with Google</span>
+                <span>Connect Wallet</span>
               </>
             )}
           </button>

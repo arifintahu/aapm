@@ -7,8 +7,8 @@ import { chainConfig } from "./web3auth";
 
 export interface SmartAccount {
   address: string;
-  provider: ethers.JsonRpcProvider;
-  signer: ethers.Wallet;
+  provider: ethers.AbstractProvider;
+  signer: ethers.Signer;
 }
 
 export class BiconomyService {
@@ -25,17 +25,24 @@ export class BiconomyService {
 
   async createSmartAccount(web3AuthProvider: IProvider): Promise<SmartAccount> {
     try {
-      // Get private key from Web3Auth
-      const privateKey = await web3AuthProvider.request({
-        method: "eth_private_key",
-      }) as string;
+      let provider: ethers.AbstractProvider;
+      let signer: ethers.Signer;
 
-      // Create ethers provider and signer
-      const provider = new ethers.JsonRpcProvider(chainConfig.rpcTarget);
-      const signer = new ethers.Wallet(privateKey, provider);
+      // Try to use embedded Web3Auth private key (OpenLogin)
+      try {
+        const privateKey = await web3AuthProvider.request({
+          method: "eth_private_key",
+        }) as string;
 
-      // For now, we'll use the EOA address directly
-      // In a full implementation, this would be the smart account address
+        provider = new ethers.JsonRpcProvider(chainConfig.rpcTarget);
+        signer = new ethers.Wallet(privateKey, provider);
+      } catch {
+        // Fallback to EIP-1193 provider (MetaMask via Web3Auth adapter)
+        const browserProvider = new ethers.BrowserProvider(web3AuthProvider as any);
+        signer = await browserProvider.getSigner();
+        provider = browserProvider;
+      }
+
       const address = await signer.getAddress();
 
       this.smartAccount = {

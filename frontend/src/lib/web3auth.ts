@@ -2,6 +2,7 @@ import { Web3Auth } from "@web3auth/modal";
 import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
+import { MetamaskAdapter } from "@web3auth/metamask-adapter";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID;
 
@@ -45,6 +46,15 @@ const openloginAdapter = new OpenloginAdapter({
 
 web3auth.configureAdapter(openloginAdapter);
 
+// Enable MetaMask in the Web3Auth modal
+const metamaskAdapter = new MetamaskAdapter({
+  clientId,
+  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+  chainConfig,
+});
+
+web3auth.configureAdapter(metamaskAdapter);
+
 export class Web3AuthService {
   private provider: IProvider | null = null;
   private isInitialized = false;
@@ -53,7 +63,81 @@ export class Web3AuthService {
     if (this.isInitialized) return;
     
     try {
-      await web3auth.initModal();
+      await web3auth.initModal({
+        modalConfig: {
+          openlogin: {
+            showOnModal: true,
+            label: "Login",
+            loginMethods: {
+              google: {
+                showOnModal: true,
+                name: "Google"
+              },
+              facebook: {
+                showOnModal: false,
+                name: ""
+              },
+              twitter: {
+                showOnModal: false,
+                name: ""
+              },
+              reddit: {
+                showOnModal: false,
+                name: ""
+              },
+              discord: {
+                showOnModal: false,
+                name: ""
+              },
+              twitch: {
+                showOnModal: false,
+                name: ""
+              },
+              apple: {
+                showOnModal: false,
+                name: ""
+              },
+              line: {
+                showOnModal: false,
+                name: ""
+              },
+              github: {
+                showOnModal: false,
+                name: ""
+              },
+              kakao: {
+                showOnModal: false,
+                name: ""
+              },
+              linkedin: {
+                showOnModal: false,
+                name: ""
+              },
+              weibo: {
+                showOnModal: false,
+                name: ""
+              },
+              wechat: {
+                showOnModal: false,
+                name: ""
+              },
+              farcaster: {
+                showOnModal: false,
+                name: ""
+              },
+              email_passwordless: {
+                showOnModal: false,
+                name: ""
+              },
+              sms_passwordless: {
+                showOnModal: false,
+                name: ""
+              },
+            },
+          },
+          metamask: { showOnModal: true, label: "MetaMask" },
+        },
+      });
       this.isInitialized = true;
       
       if (web3auth.connected) {
