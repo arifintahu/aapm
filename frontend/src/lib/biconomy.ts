@@ -38,9 +38,34 @@ export class BiconomyService {
         signer = new ethers.Wallet(privateKey, provider);
       } catch {
         // Fallback to EIP-1193 provider (MetaMask via Web3Auth adapter)
-        const browserProvider = new ethers.BrowserProvider(web3AuthProvider as any);
-        signer = await browserProvider.getSigner();
-        provider = browserProvider;
+        try {
+          // For MetaMask adapter, we need to handle the connection differently
+          const browserProvider = new ethers.BrowserProvider(web3AuthProvider as any);
+          
+          // Get accounts directly from the provider instead of using getSigner()
+          const accounts = await web3AuthProvider.request({
+            method: "eth_accounts",
+          }) as string[];
+          
+          if (!accounts || accounts.length === 0) {
+            throw new Error("No accounts available");
+          }
+
+          // Create a signer using the first account
+          signer = await browserProvider.getSigner(accounts[0]);
+          provider = browserProvider;
+        } catch (metaMaskError) {
+          console.error("MetaMask connection failed:", metaMaskError);
+          // Final fallback - try direct BrowserProvider approach
+          const browserProvider = new ethers.BrowserProvider(web3AuthProvider as any);
+          provider = browserProvider;
+          
+          // Create a basic signer without requesting accounts
+          signer = new ethers.VoidSigner(
+            await web3AuthProvider.request({ method: "eth_accounts" }).then((accounts: string[]) => accounts[0]),
+            provider
+          );
+        }
       }
 
       const address = await signer.getAddress();
@@ -70,13 +95,29 @@ export class BiconomyService {
     try {
       // For now, execute as regular transaction
       // In full implementation, this would use Biconomy's gasless execution
-      const tx = await this.smartAccount.signer.sendTransaction({
+      
+      // Prepare transaction object
+      const txRequest = {
         to,
         data,
-        value: ethers.parseEther(value),
-      });
+        value: value === "0" ? 0 : ethers.parseEther(value),
+      };
 
-      await tx.wait();
+      // For MetaMask/BrowserProvider, let it handle gas estimation automatically
+      // Only estimate gas manually if needed
+      try {
+        const gasEstimate = await this.smartAccount.signer.estimateGas(txRequest);
+        console.log("Gas estimate:", gasEstimate.toString());
+      } catch (gasError) {
+        console.warn("Gas estimation failed, letting MetaMask handle it:", gasError);
+      }
+
+      const tx = await this.smartAccount.signer.sendTransaction(txRequest);
+      console.log("Transaction sent:", tx.hash);
+
+      const receipt = await tx.wait();
+      console.log("Transaction confirmed in block:", receipt?.blockNumber);
+      
       return tx.hash;
     } catch (error) {
       console.error("Transaction execution failed:", error);
