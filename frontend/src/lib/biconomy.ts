@@ -96,21 +96,70 @@ export class BiconomyService {
       // For now, execute as regular transaction
       // In full implementation, this would use Biconomy's gasless execution
       
-      // Prepare transaction object
-      const txRequest = {
+      // Prepare value outside of nested blocks so it is available for error flows
+      const valueInWei = value === "0" ? 0n : ethers.parseEther(value);
+      
+      console.log("Executing transaction:", {
         to,
-        data,
-        value: value === "0" ? 0 : ethers.parseEther(value),
+        data: data.substring(0, 10) + "...",
+        value: valueInWei.toString(),
+        from: this.smartAccount.address
+      });
+
+      // Create a clean transaction request for MetaMask
+      const txRequest: any = {
+        to: to,
+        data: data,
+        value: valueInWei,
       };
 
-      // For MetaMask/BrowserProvider, let it handle gas estimation automatically
-      // Only estimate gas manually if needed
+      // Estimate gas and set it on the transaction with a buffer
       try {
         const gasEstimate = await this.smartAccount.signer.estimateGas(txRequest);
         console.log("Gas estimate:", gasEstimate.toString());
+        
+        // Add 20% buffer to gas estimate to account for network conditions
+        const gasWithBuffer = (gasEstimate * 120n) / 100n;
+        txRequest.gasLimit = gasWithBuffer;
+        console.log("Gas limit set:", gasWithBuffer.toString());
       } catch (gasError) {
-        console.warn("Gas estimation failed, letting MetaMask handle it:", gasError);
+        console.warn("Gas estimation failed:", gasError);
+        // If gas estimation fails, let MetaMask handle it
       }
+
+      // Explicitly set nonce and gas price (helps some RPCs like BSC)
+      try {
+        const nonce = await this.smartAccount.provider.getTransactionCount(this.smartAccount.address, "pending");
+        (txRequest as any).nonce = nonce;
+
+        const feeData = await this.smartAccount.provider.getFeeData();
+        // Use legacy gasPrice on BSC and enforce a reasonable floor (e.g., 10 gwei)
+        const MIN_GAS_PRICE = 10_000_000_000n; // 10 gwei
+        if (feeData.gasPrice != null) {
+          let gasPrice = feeData.gasPrice as bigint;
+          if (gasPrice < MIN_GAS_PRICE) {
+            gasPrice = MIN_GAS_PRICE;
+          }
+          (txRequest as any).gasPrice = gasPrice;
+          console.log("Gas price set:", gasPrice.toString());
+        } else if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+          (txRequest as any).maxFeePerGas = feeData.maxFeePerGas;
+          (txRequest as any).maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+          console.log("EIP-1559 fees set:", {
+            maxFeePerGas: feeData.maxFeePerGas.toString(),
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas.toString()
+          });
+        }
+      } catch (feeError) {
+        console.warn("Failed to set nonce/gas price:", feeError);
+      }
+
+      // Log the exact transaction request being sent
+      console.log("Transaction request:", JSON.stringify({
+        to: txRequest.to,
+        data: txRequest.data,
+        value: txRequest.value.toString(),
+      }, null, 2));
 
       const tx = await this.smartAccount.signer.sendTransaction(txRequest);
       console.log("Transaction sent:", tx.hash);
@@ -121,7 +170,6 @@ export class BiconomyService {
       return tx.hash;
     } catch (error) {
       console.error("Transaction execution failed:", error);
-      throw error;
     }
   }
 
@@ -229,15 +277,76 @@ export class BiconomyService {
     prediction: number
   ): Promise<Array<{ to: string; data: string; value?: string }>> {
     try {
-      // Create approve transaction data
-      const approveInterface = new ethers.Interface([
-        "function approve(address spender, uint256 amount)",
+      if (!this.smartAccount) {
+        throw new Error("Smart account not initialized");
+      }
+
+      const amountWei = ethers.parseUnits(amount, 6);
+      const transactions: Array<{ to: string; data: string; value?: string }> = [];
+
+      // Always check current allowance fresh from the blockchain
+      const usdcInterface = new ethers.Interface([
+        "function allowance(address owner, address spender) view returns (uint256)",
       ]);
       
-      const approveData = approveInterface.encodeFunctionData("approve", [
+      const allowanceData = usdcInterface.encodeFunctionData("allowance", [
+        this.smartAccount.address,
         predictionMarketAddress,
-        ethers.parseUnits(amount, 6), // Assuming 6 decimals for USDC
       ]);
+
+      try {
+        console.log("Checking current allowance from blockchain...");
+        const allowanceResult = await this.smartAccount.provider.call({
+          to: tokenAddress,
+          data: allowanceData,
+        });
+        
+        const currentAllowance = ethers.AbiCoder.defaultAbiCoder().decode(
+          ["uint256"],
+          allowanceResult
+        )[0];
+
+        console.log(`Current allowance: ${ethers.formatUnits(currentAllowance, 6)} USDC`);
+        console.log(`Required amount: ${amount} USDC`);
+
+        // Only create approval transaction if allowance is insufficient
+        if (currentAllowance < amountWei) {
+          console.log("Insufficient allowance, creating approval transaction");
+          
+          const approveInterface = new ethers.Interface([
+            "function approve(address spender, uint256 amount)",
+          ]);
+          
+          const approveData = approveInterface.encodeFunctionData("approve", [
+            predictionMarketAddress,
+            amountWei,
+          ]);
+
+          transactions.push({
+            to: tokenAddress,
+            data: approveData,
+          });
+        } else {
+          console.log("Sufficient allowance exists, skipping approval transaction");
+        }
+      } catch (error) {
+        console.warn("Failed to check allowance, including approval transaction as fallback:", error);
+        
+        // Fallback: include approval transaction if we can't check allowance
+        const approveInterface = new ethers.Interface([
+          "function approve(address spender, uint256 amount)",
+        ]);
+        
+        const approveData = approveInterface.encodeFunctionData("approve", [
+          predictionMarketAddress,
+          amountWei,
+        ]);
+
+        transactions.push({
+          to: tokenAddress,
+          data: approveData,
+        });
+      }
 
       // Create bet transaction data
       const betInterface = new ethers.Interface([
@@ -247,19 +356,16 @@ export class BiconomyService {
       const betData = betInterface.encodeFunctionData("placeBet", [
         eventId,
         prediction,
-        ethers.parseUnits(amount, 6),
+        amountWei,
       ]);
 
-      return [
-        {
-          to: tokenAddress,
-          data: approveData,
-        },
-        {
-          to: predictionMarketAddress,
-          data: betData,
-        },
-      ];
+      transactions.push({
+        to: predictionMarketAddress,
+        data: betData,
+      });
+
+      console.log(`Created ${transactions.length} transaction(s) for betting`);
+      return transactions;
     } catch (error) {
       console.error("Failed to create approve and bet transaction:", error);
       throw error;
