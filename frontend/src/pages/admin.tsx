@@ -53,7 +53,8 @@ export default function AdminPage() {
       setIsLoading(true);
       setError("");
       
-      await contractService.createEvent(question.trim(), endTimestamp);
+      const durationInSeconds = endTimestamp - now;
+      await contractService.createEvent(question.trim(), durationInSeconds);
       
       // Reset form
       setQuestion("");

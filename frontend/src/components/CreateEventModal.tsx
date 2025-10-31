@@ -15,10 +15,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
   onEventCreated
 }) => {
   const [question, setQuestion] = useState('');
-  const [duration, setDuration] = useState('24'); // hours
+  const [endTime, setEndTime] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { user, isAuthenticated } = useAppStore();
+
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30); // Minimum 30 minutes from now
+    return now.toISOString().slice(0, 16);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +39,15 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       return;
     }
 
-    if (!duration || parseInt(duration) <= 0) {
-      setError('Please enter a valid duration');
+    if (!endTime) {
+      setError('Please select an end time');
+      return;
+    }
+
+    const endTimestamp = Math.floor(new Date(endTime).getTime() / 1000);
+    const now = Math.floor(Date.now() / 1000);
+    if (endTimestamp <= now) {
+      setError('End time must be in the future');
       return;
     }
 
@@ -42,14 +55,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
     setError('');
 
     try {
-      const durationInSeconds = parseInt(duration) * 60 * 60; // Convert hours to seconds
+      const durationInSeconds = endTimestamp - now; // Convert selected end time to duration
       const txHash = await contractService.createEvent(question.trim(), durationInSeconds);
       
       alert('Event created successfully!');
       
       // Reset form
       setQuestion('');
-      setDuration('24');
+      setEndTime('');
       
       // Notify parent component
       if (onEventCreated) {
@@ -97,24 +110,23 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
-              Duration (hours)
+            <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-2">
+              End Time
             </label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
               <input
-                id="duration"
-                type="number"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                min="1"
-                max="8760" // 1 year
+                id="endTime"
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                min={getMinDateTime()}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Event will be open for betting for this duration
+              Select the exact end date and time for this event
             </p>
           </div>
 
