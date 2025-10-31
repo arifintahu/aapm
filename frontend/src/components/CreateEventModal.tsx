@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { contractService } from '../lib/contracts';
 import { useAppStore } from '../lib/store';
@@ -58,7 +59,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({
       const durationInSeconds = endTimestamp - now; // Convert selected end time to duration
       const txHash = await contractService.createEvent(question.trim(), durationInSeconds);
       
-      alert('Event created successfully!');
+      toast.success('Event created successfully!');
       
       // Reset form
       setQuestion('');
