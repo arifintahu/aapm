@@ -104,35 +104,35 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
 
       user = await storage.updateUser(user.id, updates)!;
       
-      logger.info(`User logged in: ${user.id}`, {
+      logger.info(`User logged in: ${user?.id || 'unknown'}`, {
         walletAddress,
-        smartAccountAddress: user.smartAccountAddress,
+        smartAccountAddress: user?.smartAccountAddress || 'none',
       });
     }
 
     // Generate JWT token
-    const token = generateToken(user.id);
+    const token = generateToken(user?.id || '');
     
     // Create session
     const session: UserSession = {
-      userId: user.id,
+      userId: user?.id || '',
       token,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      smartAccountAddress: user.smartAccountAddress,
+      smartAccountAddress: user?.smartAccountAddress || '',
     };
 
     await storage.createSession(session);
 
     // Remove sensitive data from response
     const userResponse = {
-      id: user.id,
-      walletAddress: user.walletAddress,
-      smartAccountAddress: user.smartAccountAddress,
-      email: user.email,
-      name: user.name,
-      profileImage: user.profileImage,
-      createdAt: user.createdAt,
-      lastLoginAt: user.lastLoginAt,
+      id: user?.id || '',
+      walletAddress: user?.walletAddress || '',
+      smartAccountAddress: user?.smartAccountAddress || '',
+      email: user?.email || '',
+      name: user?.name || '',
+      profileImage: user?.profileImage || '',
+      createdAt: user?.createdAt || new Date(),
+      lastLoginAt: user?.lastLoginAt || new Date(),
     };
 
     const response: ApiResponse<{

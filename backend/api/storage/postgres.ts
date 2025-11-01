@@ -238,7 +238,7 @@ class PostgreSQLStorage {
     
     try {
       const result = await database.query(query, [userId]);
-      return result.rows.map(row => this.mapBetRecordFromDb(row));
+      return result.rows.map((row: any) => this.mapBetRecordFromDb(row));
     } catch (error) {
       logger.error('Failed to get bets by user:', error);
       throw error;
@@ -250,7 +250,7 @@ class PostgreSQLStorage {
     
     try {
       const result = await database.query(query, [eventId]);
-      return result.rows.map(row => this.mapBetRecordFromDb(row));
+      return result.rows.map((row: any) => this.mapBetRecordFromDb(row));
     } catch (error) {
       logger.error('Failed to get bets by event:', error);
       throw error;
@@ -295,7 +295,7 @@ class PostgreSQLStorage {
     
     try {
       const result = await database.query(query);
-      return result.rows.map(row => this.mapBetRecordFromDb(row));
+      return result.rows.map((row: any) => this.mapBetRecordFromDb(row));
     } catch (error) {
       logger.error('Failed to get all bet records:', error);
       throw error;
@@ -347,7 +347,7 @@ class PostgreSQLStorage {
     
     try {
       const result = await database.query(query);
-      return result.rows.map(row => this.mapEventFromDb(row));
+      return result.rows.map((row: any) => this.mapEventFromDb(row));
     } catch (error) {
       logger.error('Failed to get all events:', error);
       throw error;
