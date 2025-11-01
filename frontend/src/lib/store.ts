@@ -343,9 +343,16 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Place a bet
   placeBet: async (eventId: number, prediction: Outcome, amount: string) => {
     try {
-      const { smartAccount } = get();
+      const { smartAccount, usdcBalance } = get();
       if (!smartAccount || !contractService.isContractsInitialized()) {
         throw new Error("Not connected");
+      }
+      
+      // Check if user has sufficient balance
+      const balanceNum = parseFloat(usdcBalance);
+      const amountNum = parseFloat(amount);
+      if (balanceNum < amountNum) {
+        throw new Error(`Insufficient USDC balance. You have ${usdcBalance} USDC but need ${amount} USDC. Please claim tokens from the faucet first.`);
       }
       
       set({ isLoading: true });

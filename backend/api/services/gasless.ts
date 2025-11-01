@@ -270,6 +270,49 @@ export class GaslessService {
   }
 
   /**
+   * Get batch transaction hash for user to sign
+   */
+  async getBatchTransactionHashToSign(
+    ownerAddress: string,
+    transactions: Array<{ to: string; data: string; value?: string }>
+  ): Promise<{ txHash: string; smartAccount: string; nonce: number }> {
+    try {
+      // Get or create smart account
+      const smartAccountData = await this.createSmartAccount(ownerAddress);
+      const smartAccountContract = new ethers.Contract(
+        smartAccountData.address,
+        SMART_ACCOUNT_ABI,
+        this.provider // Use provider instead of gasPayerWallet for read-only operations
+      );
+
+      // Get current nonce
+      const currentNonce = await smartAccountContract.nonce();
+
+      // Prepare transaction data
+      const to = transactions.map(tx => tx.to);
+      const values = transactions.map(tx => tx.value || '0');
+      const data = transactions.map(tx => tx.data);
+
+      // Get batch transaction hash
+      const txHash = await smartAccountContract.getBatchTransactionHash(
+        to,
+        values,
+        data,
+        currentNonce
+      );
+
+      return {
+        txHash,
+        smartAccount: smartAccountData.address,
+        nonce: Number(currentNonce)
+      };
+    } catch (error) {
+      logger.error('Failed to get batch transaction hash', { ownerAddress, error });
+      throw error;
+    }
+  }
+
+  /**
    * Estimate gas for transactions
    */
   async estimateGas(

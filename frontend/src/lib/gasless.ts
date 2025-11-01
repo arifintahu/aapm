@@ -193,7 +193,8 @@ export class GaslessService {
       // Try backend gasless execution first
       const ownerAddress = await this.smartAccount.signer.getAddress();
       
-      const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
+      // Step 1: Get transaction hash to sign from backend for batch transactions
+      const hashResponse = await fetch(`${this.backendUrl}/api/betting/get-tx-hash`, {
         method: 'POST',
         headers: backendAuthService.getAuthHeaders(),
         body: JSON.stringify({
@@ -206,10 +207,36 @@ export class GaslessService {
         })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Backend gasless batch execution successful:', result.data.txHash);
-        return result.data.txHash;
+      if (hashResponse.ok) {
+        const hashResult = await hashResponse.json();
+        const txHashToSign = hashResult.data.txHash;
+        
+        // Step 2: Sign the transaction hash with user's wallet (raw signature without message prefix)
+        const signature = await this.smartAccount.signer.provider!.send("eth_sign", [
+          await this.smartAccount.signer.getAddress(),
+          txHashToSign
+        ]);
+        
+        // Step 3: Send the signed transaction to backend
+        const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
+          method: 'POST',
+          headers: backendAuthService.getAuthHeaders(),
+          body: JSON.stringify({
+            ownerAddress,
+            transactions: transactions.map(tx => ({
+              to: tx.to,
+              data: tx.data,
+              value: tx.value || '0'
+            })),
+            signature
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Backend gasless batch execution successful:', result.data.txHash);
+          return result.data.txHash;
+        }
       }
 
       // Fallback to sequential EOA transactions
@@ -302,7 +329,7 @@ export class GaslessService {
     eventId: number,
     prediction: number
   ): Promise<Array<{ to: string; data: string; value?: string }>> {
-    const amountWei = ethers.parseUnits(amount, 18);
+    const amountWei = ethers.parseUnits(amount, 6); // USDC uses 6 decimals
     
     // Create approve transaction
     const approveInterface = new ethers.Interface([
@@ -315,11 +342,12 @@ export class GaslessService {
 
     // Create bet transaction
     const betInterface = new ethers.Interface([
-      "function placeBet(uint256 eventId, bool betYes)"
+      "function placeBet(uint256 eventId, uint8 prediction, uint256 amount)"
     ]);
     const betData = betInterface.encodeFunctionData("placeBet", [
       eventId,
-      prediction === 1
+      prediction, // prediction is already 1 for Yes, 2 for No
+      amountWei
     ]);
 
     return [

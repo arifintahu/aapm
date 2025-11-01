@@ -519,36 +519,78 @@ router.post('/send-bundle', authMiddleware, async (req: Request, res: Response):
  */
 router.post('/get-tx-hash', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { ownerAddress, to, value = '0', data } = req.body;
+    const { ownerAddress, to, value = '0', data, transactions } = req.body;
 
-    // Validate input
-    if (!ownerAddress || !to || !data) {
-      const response: ApiResponse = {
-        success: false,
-        error: 'Missing required fields: ownerAddress, to, data',
-      };
-      res.status(400).json(response);
-      return;
-    }
-
-    // Get transaction hash to sign
-    const result = await gaslessService.getTransactionHashToSign(
-      ownerAddress,
-      to,
-      value,
-      data
-    );
-
-    const response: ApiResponse = {
-      success: true,
-      data: {
-        txHash: result.txHash,
-        smartAccount: result.smartAccount,
-        nonce: result.nonce
+    // Check if this is a batch transaction request
+    if (transactions && Array.isArray(transactions)) {
+      // Batch transaction request
+      if (!ownerAddress || !transactions.length) {
+        const response: ApiResponse = {
+          success: false,
+          error: 'Missing required fields: ownerAddress, transactions array',
+        };
+        res.status(400).json(response);
+        return;
       }
-    };
 
-    res.json(response);
+      // Validate transaction format
+      for (const tx of transactions) {
+        if (!tx.to || !tx.data) {
+          const response: ApiResponse = {
+            success: false,
+            error: 'Invalid transaction format: to and data fields required for each transaction',
+          };
+          res.status(400).json(response);
+          return;
+        }
+      }
+
+      // Get batch transaction hash to sign
+      const result = await gaslessService.getBatchTransactionHashToSign(
+        ownerAddress,
+        transactions
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          txHash: result.txHash,
+          smartAccount: result.smartAccount,
+          nonce: result.nonce
+        }
+      };
+
+      res.json(response);
+    } else {
+      // Single transaction request
+      if (!ownerAddress || !to || !data) {
+        const response: ApiResponse = {
+          success: false,
+          error: 'Missing required fields: ownerAddress, to, data',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      // Get single transaction hash to sign
+      const result = await gaslessService.getTransactionHashToSign(
+        ownerAddress,
+        to,
+        value,
+        data
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          txHash: result.txHash,
+          smartAccount: result.smartAccount,
+          nonce: result.nonce
+        }
+      };
+
+      res.json(response);
+    }
   } catch (error) {
     logger.error('Error getting transaction hash:', error);
     const response: ApiResponse = {
