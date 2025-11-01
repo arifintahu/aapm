@@ -1,6 +1,6 @@
-export interface BiconomyConfig {
-  apiKey: string;
-  bundlerUrl: string;
+export interface GaslessConfig {
+  factoryAddress: string;
+  gasPayerPrivateKey: string;
   chainId: number;
 }
 
@@ -15,10 +15,21 @@ export interface ContractConfig {
   rpcUrl: string;
 }
 
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password: string;
+  ssl?: boolean;
+  maxConnections?: number;
+}
+
 export interface EnvironmentConfig {
-  biconomy: BiconomyConfig;
+  gasless: GaslessConfig;
   web3Auth: Web3AuthConfig;
   contracts: ContractConfig;
+  database: DatabaseConfig;
   privateKey: string;
   rpcUrl: string;
   chainId: number;

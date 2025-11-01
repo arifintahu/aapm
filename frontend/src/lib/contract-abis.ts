@@ -761,6 +761,19 @@ export const MOCK_USDC_ABI = [
         "internalType": "address",
         "name": "to",
         "type": "address"
+      }
+    ],
+    "name": "faucetTo",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
       },
       {
         "internalType": "uint256",

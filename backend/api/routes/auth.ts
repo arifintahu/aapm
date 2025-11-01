@@ -5,7 +5,7 @@
 import { Router, type Request, type Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage/index.js';
-import { biconomyService } from '../services/biconomy.js';
+import { gaslessService } from '../services/gasless.js';
 import { generateToken } from '../middleware/auth.js';
 import { User, UserSession, ApiResponse } from '../types/index.js';
 import { logger } from '../utils/logger.js';
@@ -40,7 +40,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    let user = storage.getUserByWallet(walletAddress);
+    let user = await storage.getUserByWallet(walletAddress);
     
     if (!user) {
       // Create new user
@@ -58,7 +58,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
 
       try {
         // Create smart account for the user
-        const smartAccountData = await biconomyService.createSmartAccount(walletAddress);
+        const smartAccountData = await gaslessService.createSmartAccount(walletAddress);
         user.smartAccountAddress = smartAccountData.address;
         
         logger.info(`Smart account created for new user: ${smartAccountData.address}`, {
@@ -70,7 +70,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
         // Continue without smart account - it can be created later
       }
 
-      user = storage.createUser(user);
+      user = await storage.createUser(user);
       
       logger.info(`New user registered: ${userId}`, {
         walletAddress,
@@ -90,7 +90,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
       // Create smart account if not exists
       if (!user.smartAccountAddress) {
         try {
-          const smartAccountData = await biconomyService.createSmartAccount(walletAddress);
+          const smartAccountData = await gaslessService.createSmartAccount(walletAddress);
           updates.smartAccountAddress = smartAccountData.address;
           
           logger.info(`Smart account created for existing user: ${smartAccountData.address}`, {
@@ -102,7 +102,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
         }
       }
 
-      user = storage.updateUser(user.id, updates)!;
+      user = await storage.updateUser(user.id, updates)!;
       
       logger.info(`User logged in: ${user.id}`, {
         walletAddress,
@@ -121,7 +121,7 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
       smartAccountAddress: user.smartAccountAddress,
     };
 
-    storage.createSession(session);
+    await storage.createSession(session);
 
     // Remove sensitive data from response
     const userResponse = {
@@ -169,7 +169,7 @@ router.get('/profile', authMiddleware, async (req: Request, res: Response): Prom
     const user = req.user!;
 
     // Get user statistics
-    const stats = storage.getUserStats(user.id);
+    const stats = await storage.getUserStats(user.id);
 
     const userProfile = {
       id: user.id,
@@ -224,7 +224,7 @@ router.put('/profile', authMiddleware, async (req: Request, res: Response): Prom
       return;
     }
 
-    const updatedUser = storage.updateUser(user.id, updates);
+    const updatedUser = await storage.updateUser(user.id, updates);
 
     if (!updatedUser) {
       const response: ApiResponse = {
@@ -268,12 +268,24 @@ router.put('/profile', authMiddleware, async (req: Request, res: Response): Prom
  * POST /api/auth/smart-account
  */
 router.post('/smart-account', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  // Detailed request logging to debug 401 errors
+  logger.info('Smart account endpoint called', {
+    headers: req.headers,
+    body: req.body,
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    authorization: req.get('Authorization'),
+    timestamp: new Date().toISOString(),
+  });
+
   try {
     const user = req.user!;
 
     if (user.smartAccountAddress) {
       // Smart account already exists, return existing data
-      const smartAccountData = await biconomyService.createSmartAccount(user.walletAddress);
+      const smartAccountData = await gaslessService.createSmartAccount(user.walletAddress);
       
       const response: ApiResponse<typeof smartAccountData> = {
         success: true,
@@ -286,10 +298,10 @@ router.post('/smart-account', authMiddleware, async (req: Request, res: Response
     }
 
     // Create new smart account
-    const smartAccountData = await biconomyService.createSmartAccount(user.walletAddress);
+    const smartAccountData = await gaslessService.createSmartAccount(user.walletAddress);
     
     // Update user with smart account address
-    const updatedUser = storage.updateUser(user.id, {
+    const updatedUser = await storage.updateUser(user.id, {
       smartAccountAddress: smartAccountData.address,
     });
 
@@ -325,7 +337,7 @@ router.post('/logout', authMiddleware, async (req: Request, res: Response): Prom
     const token = authHeader?.substring(7); // Remove 'Bearer ' prefix
 
     if (token) {
-      storage.deleteSession(token);
+      await storage.deleteSession(token);
       logger.info(`User logged out: ${req.user!.id}`);
     }
 
@@ -360,7 +372,7 @@ router.post('/refresh', authMiddleware, async (req: Request, res: Response): Pro
     const authHeader = req.headers.authorization;
     const oldToken = authHeader?.substring(7);
     if (oldToken) {
-      storage.deleteSession(oldToken);
+      await storage.deleteSession(oldToken);
     }
 
     // Create new session
@@ -371,7 +383,7 @@ router.post('/refresh', authMiddleware, async (req: Request, res: Response): Pro
       smartAccountAddress: user.smartAccountAddress,
     };
 
-    storage.createSession(session);
+    await storage.createSession(session);
 
     const response: ApiResponse<{
       token: string;

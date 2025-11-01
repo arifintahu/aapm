@@ -16,16 +16,16 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const events = storage.getAllEvents();
+    const events = await storage.getAllEvents();
     
     // Add statistics for each event
-    const eventsWithStats = events.map(event => {
-      const stats = storage.getEventStats(event.id);
+    const eventsWithStats = await Promise.all(events.map(async event => {
+      const stats = await storage.getEventStats(event.id);
       return {
         ...event,
         stats,
       };
-    });
+    }));
 
     const response: ApiResponse<typeof eventsWithStats> = {
       success: true,
@@ -61,7 +61,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const event = storage.getEvent(eventId);
+    const event = await storage.getEvent(eventId);
     
     if (!event) {
       const response: ApiResponse = {
@@ -73,7 +73,7 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Add statistics
-    const stats = storage.getEventStats(eventId);
+    const stats = await storage.getEventStats(eventId);
     const eventWithStats = {
       ...event,
       stats,
@@ -114,7 +114,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
     }
 
     // Get next event ID
-    const allEvents = storage.getAllEvents();
+    const allEvents = await storage.getAllEvents();
     const nextId = Math.max(...allEvents.map(e => e.id), 0) + 1;
 
     const newEvent: EventData = {
@@ -127,7 +127,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       createdAt: new Date(),
     };
 
-    const createdEvent = storage.createEvent(newEvent);
+    const createdEvent = await storage.createEvent(newEvent);
 
     logger.info(`New event created: ${createdEvent.id}`, {
       question: createdEvent.question,
@@ -178,7 +178,7 @@ router.put('/:id/resolve', authMiddleware, async (req: Request, res: Response): 
       return;
     }
 
-    const event = storage.getEvent(eventId);
+    const event = await storage.getEvent(eventId);
     
     if (!event) {
       const response: ApiResponse = {
@@ -198,7 +198,7 @@ router.put('/:id/resolve', authMiddleware, async (req: Request, res: Response): 
       return;
     }
 
-    const updatedEvent = storage.updateEvent(eventId, {
+    const updatedEvent = await storage.updateEvent(eventId, {
       status: 'RESOLVED',
       result: result as 'YES' | 'NO',
       resolvedAt: new Date(),
@@ -244,7 +244,7 @@ router.put('/:id/totals', async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const event = storage.getEvent(eventId);
+    const event = await storage.getEvent(eventId);
     
     if (!event) {
       const response: ApiResponse = {
@@ -261,7 +261,7 @@ router.put('/:id/totals', async (req: Request, res: Response): Promise<void> => 
     if (totalNoBets !== undefined) updates.totalNoBets = totalNoBets;
     if (totalPool !== undefined) updates.totalPool = totalPool;
 
-    const updatedEvent = storage.updateEvent(eventId, updates);
+    const updatedEvent = await storage.updateEvent(eventId, updates);
 
     const response: ApiResponse<EventData> = {
       success: true,
@@ -297,7 +297,7 @@ router.get('/:id/bets', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const event = storage.getEvent(eventId);
+    const event = await storage.getEvent(eventId);
     
     if (!event) {
       const response: ApiResponse = {
@@ -308,7 +308,7 @@ router.get('/:id/bets', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const bets = storage.getBetsByEvent(eventId);
+    const bets = await storage.getBetsByEvent(eventId);
     
     // Sort by timestamp (newest first)
     bets.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());

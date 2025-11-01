@@ -6,7 +6,7 @@ import { Router, type Request, type Response } from 'express';
 import { ethers } from 'ethers';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../storage/index.js';
-import { biconomyService } from '../services/biconomy.js';
+import { gaslessService } from '../services/gasless.js';
 import { BetRecord, ApiResponse, TransactionRequest } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 import { authMiddleware } from '../middleware/auth.js';
@@ -49,7 +49,7 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
     }
 
     // Validate event exists and is active
-    const event = storage.getEvent(parseInt(eventId, 10));
+    const event = await storage.getEvent(parseInt(eventId, 10));
     if (!event) {
       const response: ApiResponse = {
         success: false,
@@ -92,7 +92,7 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
       status: 'PENDING',
     };
 
-    storage.createBetRecord(betRecord);
+    await storage.createBetRecord(betRecord);
 
     try {
       // Prepare contract interaction
@@ -110,7 +110,7 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
         betType === 'YES'
       ]);
 
-      const transaction: TransactionRequest = {
+      const transaction = {
         to: contractAddress,
         data: functionData,
         value: '0', // Assuming we're using ERC-20 tokens, not ETH
@@ -125,16 +125,16 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
       });
 
       // Execute gasless transaction
-      const txResponse = await biconomyService.executeGaslessTransaction(
+      const txResponse = await gaslessService.executeGaslessTransaction(
         smartAccountAddress,
         [transaction]
       );
 
-      if (txResponse.status === 'SUCCESS' && txResponse.transactionHash) {
+      if (txResponse.txHash) {
         // Update bet record with transaction details
-        const updatedBet = storage.updateBetRecord(betId, {
-          transactionHash: txResponse.transactionHash,
-          blockNumber: txResponse.receipt?.blockNumber,
+        const updatedBet = await storage.updateBetRecord(betId, {
+          transactionHash: txResponse.txHash,
+          blockNumber: undefined, // Will be updated when we get receipt
           status: 'CONFIRMED',
         });
 
@@ -147,15 +147,15 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
         const newNo = betType === 'NO' ? currentNo + betAmount : currentNo;
         const newPool = currentPool + betAmount;
 
-        storage.updateEvent(parseInt(eventId, 10), {
+        await storage.updateEvent(parseInt(eventId, 10), {
           totalYesBets: newYes.toString(),
           totalNoBets: newNo.toString(),
           totalPool: newPool.toString(),
         });
 
         logger.info(`Bet placed successfully: ${betId}`, {
-          transactionHash: txResponse.transactionHash,
-          blockNumber: txResponse.receipt?.blockNumber,
+          transactionHash: txResponse.txHash,
+          smartAccount: txResponse.smartAccount,
         });
 
         const response: ApiResponse<{
@@ -173,7 +173,7 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
         res.json(response);
       } else {
         // Transaction failed
-        storage.updateBetRecord(betId, {
+        await storage.updateBetRecord(betId, {
           status: 'FAILED',
         });
 
@@ -187,7 +187,7 @@ router.post('/place-bet', authMiddleware, async (req: Request, res: Response): P
       logger.error('Transaction error:', txError);
       
       // Update bet record as failed
-      storage.updateBetRecord(betId, {
+      await storage.updateBetRecord(betId, {
         status: 'FAILED',
       });
 
@@ -216,7 +216,7 @@ router.get('/history', authMiddleware, async (req: Request, res: Response): Prom
     const userId = req.user!.id;
     const { page = 1, limit = 20, eventId, status } = req.query;
 
-    let bets = storage.getBetsByUser(userId);
+    let bets = await storage.getBetsByUser(userId);
 
     // Filter by event ID if provided
     if (eventId) {
@@ -243,8 +243,8 @@ router.get('/history', authMiddleware, async (req: Request, res: Response): Prom
     const paginatedBets = bets.slice(startIndex, endIndex);
 
     // Add event details to each bet
-    const betsWithEvents = paginatedBets.map(bet => {
-      const event = storage.getEvent(bet.eventId);
+    const betsWithEvents = await Promise.all(paginatedBets.map(async bet => {
+      const event = await storage.getEvent(bet.eventId);
       return {
         ...bet,
         event: event ? {
@@ -254,7 +254,7 @@ router.get('/history', authMiddleware, async (req: Request, res: Response): Prom
           result: event.result,
         } : null,
       };
-    });
+    }));
 
     const response: ApiResponse<{
       bets: typeof betsWithEvents;
@@ -298,7 +298,7 @@ router.get('/:betId', authMiddleware, async (req: Request, res: Response): Promi
     const { betId } = req.params;
     const userId = req.user!.id;
 
-    const bet = storage.getBetRecord(betId);
+    const bet = await storage.getBetRecord(betId);
 
     if (!bet) {
       const response: ApiResponse = {
@@ -320,7 +320,7 @@ router.get('/:betId', authMiddleware, async (req: Request, res: Response): Promi
     }
 
     // Add event details
-    const event = storage.getEvent(bet.eventId);
+    const event = await storage.getEvent(bet.eventId);
     const betWithEvent = {
       ...bet,
       event: event ? {
@@ -355,7 +355,7 @@ router.get('/:betId', authMiddleware, async (req: Request, res: Response): Promi
 router.get('/stats', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const stats = storage.getUserStats(userId);
+    const stats = await storage.getUserStats(userId);
 
     const response: ApiResponse<typeof stats> = {
       success: true,
@@ -410,13 +410,13 @@ router.post('/estimate-gas', authMiddleware, async (req: Request, res: Response)
       betType === 'YES'
     ]);
 
-    const transaction: TransactionRequest = {
+    const transaction = {
       to: contractAddress,
       data: functionData,
       value: '0',
     };
 
-    const gasEstimate = await biconomyService.estimateGas(
+    const gasEstimate = await gaslessService.estimateGas(
       smartAccountAddress,
       [transaction]
     );
@@ -433,6 +433,127 @@ router.post('/estimate-gas', authMiddleware, async (req: Request, res: Response)
     const response: ApiResponse = {
       success: false,
       error: 'Failed to estimate gas',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * Execute bundled transactions gaslessly
+ * POST /api/betting/send-bundle
+ */
+router.post('/send-bundle', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerAddress, transactions, signature } = req.body;
+
+    // Validate input
+    if (!ownerAddress || !Array.isArray(transactions) || transactions.length === 0) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Invalid request: ownerAddress and transactions array required',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Validate transaction format
+    for (const tx of transactions) {
+      if (!tx.to || !tx.data) {
+        const response: ApiResponse = {
+          success: false,
+          error: 'Invalid transaction format: to and data fields required',
+        };
+        res.status(400).json(response);
+        return;
+      }
+    }
+
+    logger.info('Executing bundle transaction', { 
+      ownerAddress, 
+      transactionCount: transactions.length 
+    });
+
+    // Normalize transactions and add signature to each transaction
+    const normalizedTransactions = transactions.map(tx => ({
+      to: tx.to,
+      data: tx.data,
+      value: tx.value || '0',
+      signature: tx.signature || signature // Use transaction-specific signature or global signature
+    }));
+
+    // Execute gasless bundle
+    const result = await gaslessService.executeGaslessTransaction(
+      ownerAddress,
+      normalizedTransactions
+    );
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        txHash: result.txHash,
+        smartAccount: result.smartAccount,
+        transactionCount: transactions.length
+      },
+    };
+
+    logger.info('Bundle transaction executed successfully', {
+      ownerAddress,
+      txHash: result.txHash,
+      smartAccount: result.smartAccount
+    });
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Error executing bundle transaction:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Failed to execute bundle transaction',
+    };
+    res.status(500).json(response);
+  }
+});
+
+/**
+ * Get transaction hash for user to sign
+ * POST /api/betting/get-tx-hash
+ */
+router.post('/get-tx-hash', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ownerAddress, to, value = '0', data } = req.body;
+
+    // Validate input
+    if (!ownerAddress || !to || !data) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Missing required fields: ownerAddress, to, data',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Get transaction hash to sign
+    const result = await gaslessService.getTransactionHashToSign(
+      ownerAddress,
+      to,
+      value,
+      data
+    );
+
+    const response: ApiResponse = {
+      success: true,
+      data: {
+        txHash: result.txHash,
+        smartAccount: result.smartAccount,
+        nonce: result.nonce
+      }
+    };
+
+    res.json(response);
+  } catch (error) {
+    logger.error('Error getting transaction hash:', error);
+    const response: ApiResponse = {
+      success: false,
+      error: 'Failed to get transaction hash',
     };
     res.status(500).json(response);
   }

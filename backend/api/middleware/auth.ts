@@ -27,7 +27,22 @@ export const authMiddleware = async (
   try {
     const authHeader = req.headers.authorization;
     
+    // Log all authentication attempts for debugging
+    logger.info('Authentication attempt', {
+      url: req.url,
+      method: req.method,
+      authHeader: authHeader ? `Bearer ${authHeader.substring(7, 20)}...` : 'missing',
+      userAgent: req.get('User-Agent'),
+      ip: req.ip,
+      timestamp: new Date().toISOString(),
+    });
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn('Authentication failed: Missing or invalid authorization header', {
+        url: req.url,
+        authHeader: authHeader || 'undefined',
+      });
+      
       const response: ApiResponse = {
         success: false,
         error: 'Authorization token required',
@@ -42,10 +57,20 @@ export const authMiddleware = async (
       // Verify JWT token
       const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; iat: number; exp: number };
       
+      logger.info('JWT token verified successfully', {
+        userId: decoded.userId,
+        url: req.url,
+      });
+      
       // Get user from storage
       const user = storage.getUserById(decoded.userId);
       
       if (!user) {
+        logger.warn('Authentication failed: User not found', {
+          userId: decoded.userId,
+          url: req.url,
+        });
+        
         const response: ApiResponse = {
           success: false,
           error: 'User not found',
@@ -58,6 +83,11 @@ export const authMiddleware = async (
       const session = storage.getSession(token);
       
       if (!session) {
+        logger.warn('Authentication failed: Invalid or expired session', {
+          userId: decoded.userId,
+          url: req.url,
+        });
+        
         const response: ApiResponse = {
           success: false,
           error: 'Invalid or expired session',

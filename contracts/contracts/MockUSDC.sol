@@ -39,4 +39,14 @@ contract MockUSDC is ERC20, Ownable {
         require(balanceOf(msg.sender) < 10000 * 10**_decimals, "Already has enough tokens");
         _mint(msg.sender, 1000 * 10**_decimals); // Mint 1000 mUSDC
     }
+    
+    /**
+     * @dev Faucet function that mints to a specific address - useful for smart accounts
+     * @param to Address to mint tokens to
+     */
+    function faucetTo(address to) external {
+        require(to != address(0), "Cannot mint to zero address");
+        require(balanceOf(to) < 10000 * 10**_decimals, "Target address already has enough tokens");
+        _mint(to, 1000 * 10**_decimals); // Mint 1000 mUSDC
+    }
 }

@@ -8,12 +8,14 @@ export default function WalletModal() {
     showWalletModal,
     setShowWalletModal,
     user,
+    smartAccount,
     usdcBalance,
     claimFaucet,
     isLoading,
   } = useAppStore();
 
   const [copied, setCopied] = React.useState(false);
+  const [smartAccountCopied, setSmartAccountCopied] = React.useState(false);
   const [claiming, setClaiming] = React.useState(false);
 
   const handleClose = () => {
@@ -25,6 +27,14 @@ export default function WalletModal() {
       await navigator.clipboard.writeText(user.address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopySmartAccount = async () => {
+    if (smartAccount?.address) {
+      await navigator.clipboard.writeText(smartAccount.address);
+      setSmartAccountCopied(true);
+      setTimeout(() => setSmartAccountCopied(false), 2000);
     }
   };
 
@@ -121,6 +131,46 @@ export default function WalletModal() {
             </div>
           </div>
 
+          {/* Smart Account */}
+          {smartAccount && (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-gray-300">
+                  Smart Account Address
+                </label>
+                <div className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded-full border border-green-500/30">
+                  ⚡ Gasless
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg px-3 py-2 font-mono text-sm text-white border border-green-500/30">
+                  {smartAccount.address.slice(0, 6)}...{smartAccount.address.slice(-4)}
+                </div>
+                <button
+                  onClick={handleCopySmartAccount}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Copy smart account address"
+                >
+                  {smartAccountCopied ? (
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+                <button
+                  onClick={() => window.open(`${chainConfig.blockExplorerUrl}/address/${smartAccount.address}`, '_blank')}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="View smart account on Etherscan"
+                >
+                  <ExternalLink className="h-4 w-4 text-gray-400" />
+                </button>
+              </div>
+              <div className="text-xs text-gray-400 bg-blue-500/10 rounded-lg p-2 border border-blue-500/20">
+                💡 This is your gasless smart account that enables fee-free transactions
+              </div>
+            </div>
+          )}
+
           {/* Balance */}
           <div className="space-y-4">
             <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl p-4 border border-purple-500/30">
@@ -186,8 +236,8 @@ export default function WalletModal() {
             <div className="text-sm text-gray-400">Powered by</div>
             <div className="flex justify-center space-x-4 text-xs text-gray-500">
               <span>🔐 Web3Auth</span>
-              <span>⚡ Biconomy</span>
-              <span>🌐 Sepolia</span>
+              <span>⚡ Smart Account</span>
+              <span>🌐 BSC Testnet</span>
             </div>
           </div>
         </div>

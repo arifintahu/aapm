@@ -128,7 +128,7 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-lg font-semibold text-white">Prediction Market</span>
             </div>
             <p className="text-gray-300 text-sm">
-              Gasless prediction betting powered by Web3Auth and Biconomy
+              Gasless prediction betting powered by Web3Auth and Custom Smart Accounts
             </p>
             <div className="mt-4 flex justify-center space-x-6 text-sm text-gray-400">
               <span>✨ No gas fees</span>

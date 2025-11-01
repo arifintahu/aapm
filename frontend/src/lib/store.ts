@@ -1,8 +1,13 @@
 import { create } from "zustand";
+import { ethers } from "ethers";
 import { IProvider } from "@web3auth/base";
 import { web3AuthService } from "./web3auth";
-import { biconomyService, SmartAccount } from "./biconomy";
+import { gaslessService, SmartAccount } from "./gasless";
 import { contractService, PredictionEvent, UserBet, Outcome } from "./contracts";
+import { backendAuthService } from "./backend-auth";
+import toast from "react-hot-toast";
+
+console.log(`[${new Date().toISOString()}] STORE MODULE LOADED`);
 
 interface User {
   address: string;
@@ -66,6 +71,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Initialize the app
   initialize: async () => {
+    console.log(`[${new Date().toISOString()}] INITIALIZE FUNCTION CALLED - NEW VERSION`);
+    
     try {
       set({ isInitializing: true });
       
@@ -76,31 +83,79 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (web3AuthService.isConnected()) {
         const provider = web3AuthService.getProvider();
         if (provider) {
-          // Get user info
-          const userInfo = await web3AuthService.getUserInfo();
-          const accounts = await web3AuthService.getAccounts();
-          
-          // Create smart account
-          const smartAccount = await biconomyService.createSmartAccount(provider);
-          
-          // Set up contract service
-          contractService.setSigner(smartAccount.signer);
-          
-          set({
-            isAuthenticated: true,
-            provider,
-            smartAccount,
-            user: {
-              address: accounts[0],
-              email: userInfo.email,
-              name: userInfo.name,
-              profileImage: userInfo.profileImage,
-            },
-          });
-          
-          // Load initial data
-          await get().loadEvents();
-          await get().loadBalance();
+          try {
+            // Get user info and accounts with retry logic
+            const userInfo = await web3AuthService.getUserInfo();
+            
+            // Retry getting accounts if they're not immediately available (page reload scenario)
+            let accounts: string[] = [];
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while ((!accounts || accounts.length === 0) && retryCount < maxRetries) {
+              try {
+                accounts = await web3AuthService.getAccounts();
+                if (!accounts || accounts.length === 0) {
+                  console.log(`Store init attempt ${retryCount + 1}: No accounts found, retrying in 300ms...`);
+                  await new Promise(resolve => setTimeout(resolve, 300));
+                  retryCount++;
+                }
+              } catch (accountError) {
+                console.log(`Store init attempt ${retryCount + 1}: Error getting accounts:`, accountError);
+                await new Promise(resolve => setTimeout(resolve, 300));
+                retryCount++;
+              }
+            }
+            
+            // Check if we actually have accounts
+            if (!accounts || accounts.length === 0) {
+              console.log('No accounts found after retries, user needs to login');
+              return;
+            }
+            
+            console.log('Initialize - accounts:', accounts);
+            console.log('Initialize - userInfo:', userInfo);
+            
+            // Authenticate with backend if not already authenticated
+            let authResult;
+            if (!backendAuthService.isAuthenticated()) {
+              authResult = await backendAuthService.authenticateWithWeb3Auth(
+                accounts[0],
+                userInfo.email,
+                userInfo.name,
+                userInfo.profileImage
+              );
+              
+              if (!authResult.success) {
+                throw new Error(authResult.error || 'Backend authentication failed');
+              }
+            }
+            
+            // Create smart account using Web3Auth provider (smart account address comes from backend auth)
+            const smartAccount = await gaslessService.createSmartAccountFromProvider(provider, authResult?.data?.user?.smartAccountAddress);
+            
+            // Set up contract service
+            contractService.setSigner(smartAccount.signer);
+            
+            set({
+              isAuthenticated: true,
+              provider,
+              smartAccount,
+              user: {
+                address: accounts[0],
+                email: userInfo.email,
+                name: userInfo.name,
+                profileImage: userInfo.profileImage,
+              },
+            });
+            
+            // Load initial data
+            await get().loadEvents();
+            await get().loadBalance();
+          } catch (accountError) {
+            console.log('Failed to get accounts or authenticate:', accountError);
+            // User needs to login manually
+          }
         }
       }
     } catch (error) {
@@ -117,10 +172,62 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       const provider = await web3AuthService.login();
       const userInfo = await web3AuthService.getUserInfo();
-      const accounts = await web3AuthService.getAccounts();
       
-      // Create smart account
-      const smartAccount = await biconomyService.createSmartAccount(provider);
+      // Retry getting accounts after login (Web3Auth needs time to initialize)
+      let accounts: string[] = [];
+      let retryCount = 0;
+      const maxRetries = 5;
+      
+      while ((!accounts || accounts.length === 0) && retryCount < maxRetries) {
+        try {
+          accounts = await web3AuthService.getAccounts();
+          if (!accounts || accounts.length === 0) {
+            console.log(`Login attempt ${retryCount + 1}: No accounts found, retrying in 500ms...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retryCount++;
+          }
+        } catch (accountError) {
+          console.log(`Login attempt ${retryCount + 1}: Error getting accounts:`, accountError);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          retryCount++;
+        }
+      }
+      
+      // Validate accounts
+      if (!accounts || accounts.length === 0) {
+        throw new Error('Unable to retrieve wallet address after login. Please try again.');
+      }
+      
+      console.log('Login - accounts:', accounts);
+      console.log('Login - userInfo:', userInfo);
+      
+      // Authenticate with backend
+      const authResult = await backendAuthService.authenticateWithWeb3Auth(
+        accounts[0],
+        userInfo.email,
+        userInfo.name,
+        userInfo.profileImage
+      );
+      
+      if (!authResult.success) {
+        throw new Error(authResult.error || 'Backend authentication failed');
+      }
+      
+      // Create smart account using Web3Auth provider (smart account address comes from backend auth)
+      const smartAccount = await gaslessService.createSmartAccountFromProvider(provider, authResult?.data?.user?.smartAccountAddress);
+      
+      // Show success toast for smart account creation
+      toast.success(
+        `🎉 Smart Account Created!\nAddress: ${smartAccount.address.slice(0, 6)}...${smartAccount.address.slice(-4)}`,
+        {
+          duration: 5000,
+          style: {
+            background: '#10B981',
+            color: 'white',
+            fontWeight: 'bold',
+          },
+        }
+      );
       
       // Set up contract service
       contractService.setSigner(smartAccount.signer);
@@ -154,6 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ isLoading: true });
       
       await web3AuthService.logout();
+      backendAuthService.logout();
       
       set({
         isAuthenticated: false,
@@ -219,12 +327,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load USDC balance
   loadBalance: async () => {
     try {
-      const { user } = get();
-      if (!user || !contractService.isContractsInitialized()) {
+      const { user, smartAccount } = get();
+      if (!user || !smartAccount || !contractService.isContractsInitialized()) {
         return;
       }
       
-      const balance = await contractService.getUSDCBalance(user.address);
+      // Use smart account address instead of user wallet address
+      const balance = await contractService.getUSDCBalance(smartAccount.address);
       set({ usdcBalance: balance });
     } catch (error) {
       console.error("Failed to load balance:", error);
@@ -244,7 +353,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const contracts = contractService.getContractAddresses();
       
       // Create approve + bet transaction
-      const transactions = await biconomyService.createApproveAndBetTransaction(
+      const transactions = await gaslessService.createApproveAndBetTransaction(
         contracts.MOCK_USDC,
         contracts.PREDICTION_MARKET,
         amount,
@@ -253,7 +362,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       );
       
       // Execute batch transaction
-      const txHash = await biconomyService.executeBatchTransaction(transactions);
+      const txHash = await gaslessService.executeBatchTransaction(transactions);
       
       // Reload data
       await get().loadBalance();
@@ -294,7 +403,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       set({ isLoading: true });
       
-      const txHash = await contractService.claimFromFaucet();
+      const { smartAccount } = get();
+      if (!smartAccount || !contractService.isContractsInitialized()) {
+        throw new Error("Not connected");
+      }
+      
+      const targetAddress = smartAccount.address; // Use smart account address
+      console.log("Claiming faucet for smart account:", targetAddress);
+      
+      // Get contract addresses
+      const contracts = contractService.getContractAddresses();
+      
+      // Create the faucetTo transaction data
+      const mockUSDCInterface = new ethers.Interface([
+        "function faucetTo(address to)"
+      ]);
+      
+      const txData = mockUSDCInterface.encodeFunctionData("faucetTo", [targetAddress]);
+      
+      // Execute through gasless service
+      const txHash = await gaslessService.executeTransaction(
+        contracts.MOCK_USDC,
+        txData,
+        "0"
+      );
+      
+      console.log("Faucet transaction successful:", txHash);
       
       // Reload balance
       await get().loadBalance();

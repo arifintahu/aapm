@@ -5,18 +5,29 @@ import authRoutes from './routes/auth.js';
 import eventsRoutes from './routes/events.js';
 import bettingRoutes from './routes/betting.js';
 import { logger, loggerStream } from './utils/logger.js';
+import { storage } from './storage/index.js';
 
 // Load environment variables
 import dotenv from 'dotenv';
 dotenv.config();
-// Force restart to pick up new port - updated to 4000
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Initialize database storage
+async function initializeApp() {
+  try {
+    await storage.initialize();
+    logger.info('✅ Database storage initialized successfully');
+  } catch (error) {
+    logger.error('❌ Failed to initialize database storage:', error);
+    process.exit(1);
+  }
+}
+
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -107,19 +118,30 @@ process.on('SIGINT', () => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 Server running on port ${PORT}`, {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development',
-    nodeVersion: process.version,
-  });
+async function startServer() {
+  // Initialize database first
+  await initializeApp();
   
-  logger.info('📊 API endpoints available:', {
-    auth: `http://localhost:${PORT}/api/auth`,
-    events: `http://localhost:${PORT}/api/events`,
-    betting: `http://localhost:${PORT}/api/betting`,
-    health: `http://localhost:${PORT}/api/health`,
+  app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`, {
+      port: PORT,
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version,
+    });
+    
+    logger.info('📊 API endpoints available:', {
+      auth: `http://localhost:${PORT}/api/auth`,
+      events: `http://localhost:${PORT}/api/events`,
+      betting: `http://localhost:${PORT}/api/betting`,
+      health: `http://localhost:${PORT}/api/health`,
+    });
   });
+}
+
+// Start the server
+startServer().catch((error) => {
+  logger.error('Failed to start server:', error);
+  process.exit(1);
 });
 
 export default app;

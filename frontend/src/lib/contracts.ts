@@ -2,10 +2,10 @@ import { ethers } from "ethers";
 import { chainConfig } from "./web3auth";
 import { PREDICTION_MARKET_ABI, MOCK_USDC_ABI } from "./contract-abis";
 
-// Contract addresses - deployed on Sepolia testnet
+// Contract addresses - deployed on BSC Testnet
 export const CONTRACT_ADDRESSES = {
-  PREDICTION_MARKET: import.meta.env.VITE_PREDICTION_MARKET_ADDRESS || "0x24fFEAc69FE7CAcb45c7a39D0995618428205a6F",
-  MOCK_USDC: import.meta.env.VITE_MOCK_USDC_ADDRESS || "0xed3725F43893A72D8B940b6414eE10F4A570A769",
+  PREDICTION_MARKET: import.meta.env.VITE_PREDICTION_MARKET_ADDRESS || "0x38E5165811670837042c8ccaDE0Be7380D15eFfe",
+  MOCK_USDC: import.meta.env.VITE_MOCK_USDC_ADDRESS || "0xa49FeA13D29671C1203Dc1434b2647e71E24fdDc",
 };
 
 // Network configuration
@@ -236,14 +236,59 @@ export class ContractService {
     return ethers.formatUnits(allowance, 6);
   }
 
-  async claimFromFaucet(): Promise<string> {
+  async claimFromFaucet(targetAddress?: string): Promise<string> {
     if (!this.mockUSDCContract) {
       throw new Error("Mock USDC contract not initialized");
     }
 
-    const tx = await this.mockUSDCContract.faucet();
-    await tx.wait();
-    return tx.hash;
+    console.log("claimFromFaucet called with targetAddress:", targetAddress);
+
+    try {
+      let tx;
+      if (targetAddress) {
+        console.log("Using faucetTo function with target:", targetAddress);
+        
+        // Estimate gas first
+        const gasEstimate = await this.mockUSDCContract.faucetTo.estimateGas(targetAddress);
+        console.log("Gas estimate:", gasEstimate.toString());
+        
+        // Use faucetTo to mint to specific address (smart account) with explicit gas
+        tx = await this.mockUSDCContract.faucetTo(targetAddress, {
+          gasLimit: gasEstimate * 120n / 100n, // Add 20% buffer
+        });
+      } else {
+        console.log("Using regular faucet function");
+        
+        // Estimate gas first
+        const gasEstimate = await this.mockUSDCContract.faucet.estimateGas();
+        console.log("Gas estimate:", gasEstimate.toString());
+        
+        // Use regular faucet to mint to msg.sender (wallet address) with explicit gas
+        tx = await this.mockUSDCContract.faucet({
+          gasLimit: gasEstimate * 120n / 100n, // Add 20% buffer
+        });
+      }
+      
+      console.log("Transaction sent:", tx.hash);
+      await tx.wait();
+      console.log("Transaction confirmed:", tx.hash);
+      return tx.hash;
+    } catch (error: any) {
+      console.error("Error in claimFromFaucet:", error);
+      
+      // Log more details about the error
+      if (error.data) {
+        console.error("Error data:", error.data);
+      }
+      if (error.reason) {
+        console.error("Error reason:", error.reason);
+      }
+      if (error.code) {
+        console.error("Error code:", error.code);
+      }
+      
+      throw error;
+    }
   }
 
   // Utility methods
