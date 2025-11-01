@@ -63,7 +63,7 @@ export const authMiddleware = async (
       });
       
       // Get user from storage
-      const user = storage.getUserById(decoded.userId);
+      const user = await storage.getUserById(decoded.userId);
       
       if (!user) {
         logger.warn('Authentication failed: User not found', {
@@ -80,7 +80,7 @@ export const authMiddleware = async (
       }
 
       // Check if session exists and is valid
-      const session = storage.getSession(token);
+      const session = await storage.getSession(token);
       
       if (!session) {
         logger.warn('Authentication failed: Invalid or expired session', {
@@ -99,9 +99,11 @@ export const authMiddleware = async (
       // Attach user to request
       req.user = user;
       
-      // Update last login time
+      // Update last login time (fire and forget)
       storage.updateUser(user.id, {
         lastLoginAt: new Date(),
+      }).catch(error => {
+        logger.warn('Failed to update last login time:', error);
       });
 
       next();
