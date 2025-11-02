@@ -1,0 +1,24 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Diagonal Gradient: Top-Left → Bottom-Right -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#8B00FF" /> <!-- Purple (top-left) -->
+      <stop offset="50%"  stop-color="#4B0082" /> <!-- Indigo (middle) -->
+      <stop offset="100%" stop-color="#0000FF" /> <!-- Blue (bottom-right) -->
+    </linearGradient>
+  </defs>
+
+  <!-- Gradient background -->
+  <rect width="32" height="32" fill="url(#gradient)" />
+
+  <!-- Bold white "A", perfectly centered -->
+  <text x="16" y="16"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="26"
+        font-weight="bold"
+        fill="#FFFFFF"
+        text-anchor="middle"
+        dominant-baseline="central">
+    A
+  </text>
+</svg>
