@@ -1,186 +1,168 @@
-# AAPM - Gasless Prediction Market Betting Platform
+# 🎯 AAPM - Account Abstraction for Prediction Markets
 
-A decentralized prediction market platform built with React, Express, and Ethereum smart contracts, featuring gasless transactions through Biconomy.
+> **Making prediction markets feel like normal apps, not DeFi dApps**
 
-## Features
+## 🌟 Project Vision
 
-- **Gasless Transactions**: Users can interact with smart contracts without paying gas fees
-- **Web3 Authentication**: Secure login using Web3Auth
-- **Prediction Markets**: Create and participate in prediction markets
-- **Real-time Updates**: Live market data and betting information
-- **Responsive Design**: Modern UI built with React and Tailwind CSS
+AAPM transforms the prediction market experience by eliminating the complexity of traditional Web3 interactions. Our goal is to make betting on future events as simple as using any mainstream application.
 
-## Tech Stack
+## 🚀 The Problem We Solve
 
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
-- **Backend**: Express.js, TypeScript
-- **Blockchain**: Ethereum, Hardhat, Ethers.js
-- **Authentication**: Web3Auth
-- **Gasless Transactions**: Biconomy
-- **State Management**: Zustand
+**Traditional prediction markets feel like DeFi dApps:**
+- ❌ Complex wallet setup and management
+- ❌ Confusing bridging between networks  
+- ❌ Gas fees for every transaction
+- ❌ Technical barriers for mainstream users
 
-## Project Structure
+**AAPM makes it feel like a normal app:**
+- ✅ **Social Login**: Sign in with Google - no wallet needed
+- ✅ **Smart Accounts**: Automatically created for each user
+- ✅ **Gasless Experience**: Only pay with USDC for betting, no gas fees
+- ✅ **Seamless UX**: No technical knowledge required
 
-This is a multi-project workspace containing three separate applications:
+## 🏗️ System Design
 
-```
-aapm/
-├── contracts/             # Smart contracts (Hardhat project)
-│   ├── contracts/         # Solidity smart contracts
-│   ├── scripts/           # Deployment scripts
-│   ├── test/              # Contract tests
-│   ├── artifacts/         # Compiled contracts
-│   ├── cache/             # Hardhat cache
-│   ├── typechain-types/   # TypeScript contract types
-│   ├── hardhat.config.ts  # Hardhat configuration
-│   └── package.json       # Contract dependencies
-├── backend/               # API server (Express.js)
-│   ├── api/               # Express server and routes
-│   ├── nodemon.json       # Nodemon configuration
-│   └── package.json       # Backend dependencies
-├── frontend/              # React application (Vite)
-│   ├── src/               # React source code
-│   ├── public/            # Static assets
-│   ├── index.html         # HTML template
-│   ├── vite.config.ts     # Vite configuration
-│   ├── tailwind.config.js # Tailwind CSS config
-│   └── package.json       # Frontend dependencies
-└── package.json           # Workspace configuration
+```mermaid
+graph TD
+    A[👤 User] -->|Google Login| B[🔐 Web3Auth]
+    B --> C[🏦 Smart Account Creation]
+    C --> D[💰 USDC Wallet]
+    D --> E[🎲 Gasless Betting]
+    E --> F[📊 Prediction Markets]
+    
+    G[⛽ Gas Sponsorship] --> E
+    H[🔗 Account Abstraction] --> C
 ```
 
-## Getting Started
+### Key Components:
+- **🔐 Social Authentication**: Web3Auth integration for familiar login experience
+- **🏦 Smart Accounts**: Account abstraction eliminates EOA wallet complexity
+- **⛽ Gasless Transactions**: Gas sponsorship removes transaction friction
+- **💰 USDC-Only**: Simple token-based betting without native BNB requirements
+- **📱 Mobile-First UI**: Responsive design that works everywhere
 
-### Prerequisites
+## ⚡ Quick Start
 
-- Node.js (v18 or higher)
-- npm or yarn
-- MetaMask or compatible Web3 wallet
-
-### Installation
-
-1. Clone the repository:
+### 🚀 One-Command Setup
 ```bash
+# Clone and install everything
 git clone <repository-url>
 cd aapm
-```
-
-2. Install all dependencies:
-```bash
 npm run install:all
 ```
 
-3. Set up environment variables in each project:
-   - Copy `.env.example` to `.env` in each project directory
-   - Fill in the required environment variables
-
-### Development
-
-#### Option 1: Run all services together
+### 🏃‍♂️ Run the Application
 ```bash
+# Start everything (frontend + backend + blockchain)
 npm run dev
 ```
-This starts both backend and frontend servers concurrently.
 
-#### Option 2: Run services individually
+**That's it! 🎉**
+- 🌐 Frontend: http://localhost:5173
+- 🔧 Backend API: http://localhost:3000  
+- ⛓️ Local Blockchain: http://localhost:8545
 
-**Smart Contracts (Local Blockchain):**
+### 🎮 Try It Out
+1. Open http://localhost:5173
+2. Click "Login with Google"
+3. Start betting with USDC (no gas needed!)
+
+## 🛠️ For Developers
+
+<details>
+<summary>📁 Project Structure</summary>
+
+```
+aapm/
+├── 📱 frontend/          # React app with gasless UX
+├── 🔧 backend/           # Express API server  
+├── 📜 contracts/         # Smart contracts & deployment
+└── 📚 docs/              # Documentation
+```
+</details>
+
+<details>
+<summary>🔧 Development Commands</summary>
+
 ```bash
-npm run dev:contracts
+# Individual services
+npm run dev:frontend     # React app only
+npm run dev:backend      # API server only  
+npm run dev:contracts    # Local blockchain only
+
+# Testing & Building
+npm run test:contracts   # Run smart contract tests
+npm run build:all        # Build for production
+npm run lint:frontend    # Code quality checks
+```
+</details>
+
+<details>
+<summary>⚙️ Environment Setup</summary>
+
+Create `.env` files in each directory:
+
+**Frontend:**
+```env
+VITE_WEB3AUTH_CLIENT_ID=your_web3auth_client_id
+VITE_CHAIN_ID=0x61
+VITE_CHAIN_RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
+VITE_CHAIN_NETWORK_NAME=BSC Testnet
+VITE_CHAIN_BLOCK_EXPLORER_URL=https://testnet.bscscan.com
+VITE_CHAIN_TICKER=BNB
+VITE_CHAIN_TICKER_NAME=Binance Coin
+VITE_CHAIN_LOGO_URL=https://cryptologos.cc/logos/bnb-bnb-logo.png
+VITE_PREDICTION_MARKET_ADDRESS=your_deployed_contract_address
+VITE_MOCK_USDC_ADDRESS=your_deployed_usdc_address
+VITE_BACKEND_URL=http://localhost:4000
 ```
 
-**Backend API Server:**
-```bash
-npm run dev:backend
+**Backend:**
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=aapm_db
+DB_USER=aapm_user
+DB_PASSWORD=aapm_password
+DB_SSL=false
+DB_MAX_CONNECTIONS=20
+DB_IDLE_TIMEOUT=30000
+DB_CONNECTION_TIMEOUT=2000
+
+# Server Configuration
+PORT=4000
+NODE_ENV=development
+JWT_SECRET=your_jwt_secret_key
+
+# Gasless Transaction Configuration
+GASLESS_FACTORY_ADDRESS=your_factory_address
+GASLESS_GAS_PAYER_PRIVATE_KEY=your_gas_payer_private_key
+GASLESS_CHAIN_ID=97
+
+# Contract Configuration
+PREDICTION_MARKET_ADDRESS=your_deployed_contract_address
+PRIVATE_KEY=your_deployer_private_key
+RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
+
+# Web3Auth Configuration
+VITE_WEB3AUTH_CLIENT_ID=your_web3auth_client_id
+WEB3AUTH_NETWORK=sapphire_devnet
 ```
 
-**Frontend Application:**
-```bash
-npm run dev:frontend
+**Contracts:**
+```env
+# Deployment Configuration
+PRIVATE_KEY=your_deployer_private_key
+RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
+CHAIN_ID=97
+
+# Contract Addresses (after deployment)
+PREDICTION_MARKET_ADDRESS=your_deployed_contract_address
+MOCK_USDC_ADDRESS=your_deployed_usdc_address
 ```
+</details>
 
-### Application URLs
+## 📄 License
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
-- Local Blockchain: http://localhost:8545
-
-### Smart Contract Development
-
-1. Navigate to contracts directory:
-```bash
-cd contracts
-```
-
-2. Compile contracts:
-```bash
-npm run compile
-```
-
-3. Run tests:
-```bash
-npm run test
-```
-
-4. Deploy to local network:
-```bash
-npm run node          # Start local blockchain
-npm run deploy        # Deploy contracts
-```
-
-### Building for Production
-
-Build all projects:
-```bash
-npm run build:all
-```
-
-Or build individually:
-```bash
-npm run build:contracts  # Compile smart contracts
-npm run build:backend    # Build backend server
-npm run build:frontend   # Build frontend application
-```
-
-### Environment Variables
-
-Each project requires its own environment variables:
-
-**Frontend (.env):**
-- `VITE_WEB3AUTH_CLIENT_ID`: Your Web3Auth client ID
-- `VITE_BICONOMY_API_KEY`: Your Biconomy API key
-- `VITE_CONTRACT_ADDRESS`: Deployed contract address
-
-**Backend (.env):**
-- `PORT`: Server port (default: 3000)
-- `NODE_ENV`: Environment (development/production)
-
-**Contracts (.env):**
-- `PRIVATE_KEY`: Deployment wallet private key
-- `INFURA_API_KEY`: Infura project API key (for testnet/mainnet)
-
-## Available Scripts
-
-### Workspace Level
-- `npm run install:all` - Install dependencies for all projects
-- `npm run dev` - Start backend and frontend in development mode
-- `npm run build:all` - Build all projects for production
-- `npm run clean` - Clean all build artifacts
-
-### Individual Projects
-- `npm run dev:contracts` - Start local Hardhat node
-- `npm run dev:backend` - Start backend development server
-- `npm run dev:frontend` - Start frontend development server
-- `npm run test:contracts` - Run smart contract tests
-- `npm run lint:frontend` - Lint frontend code
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
