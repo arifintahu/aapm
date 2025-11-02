@@ -140,6 +140,10 @@ interface AppState {
   setShowBetModal: (show: boolean) => void;
 }
 
+// Global initialization state to prevent race conditions
+let isInitializing = false;
+let initializationPromise: Promise<void> | null = null;
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
   isAuthenticated: false,
@@ -155,43 +159,61 @@ export const useAppStore = create<AppState>((set, get) => ({
   showWalletModal: false,
   showBetModal: false,
 
-  // Initialize the app
+  // Actions
   initialize: async () => {
     console.log(`[${new Date().toISOString()}] INITIALIZE FUNCTION CALLED - NEW VERSION`);
     
-    try {
-      set({ isInitializing: true });
+    // Prevent multiple simultaneous initializations
+    if (isInitializing) {
+      console.log('Initialization already in progress, waiting for completion...');
+      if (initializationPromise) {
+        await initializationPromise;
+      }
+      return;
+    }
+
+    // Create initialization promise to handle concurrent calls
+    initializationPromise = (async () => {
+      isInitializing = true;
       
-      // Initialize Web3Auth
-      await web3AuthService.init();
-      
-      // Check if user is already connected
-      if (web3AuthService.isConnected()) {
-        const provider = web3AuthService.getProvider();
-        if (provider) {
-          try {
-            // Get user info
-            const userInfo = await web3AuthService.getUserInfo();
-            
-            // Get accounts with retry logic (using shorter retry for initialize)
-            const accounts = await getAccountsWithRetry('initialize', 3, 300);
-            
-            // Authenticate and setup smart account
-            const { smartAccount } = await authenticateAndSetupSmartAccount(provider, accounts, userInfo);
-            
-            // Update state and load initial data
-            await updateStateAndLoadData(set, get, provider, smartAccount, accounts, userInfo);
-          } catch (accountError) {
-            console.log('Failed to get accounts or authenticate:', accountError);
-            // User needs to login manually
+      try {
+        set({ isInitializing: true });
+        
+        // Initialize Web3Auth
+        await web3AuthService.init();
+        
+        // Check if user is already connected
+        if (web3AuthService.isConnected()) {
+          const provider = web3AuthService.getProvider();
+          if (provider) {
+            try {
+              // Get user info
+              const userInfo = await web3AuthService.getUserInfo();
+              
+              // Get accounts with retry logic (using longer retry for initialize after refresh)
+              const accounts = await getAccountsWithRetry('initialize', 5, 500);
+              
+              // Authenticate and setup smart account
+              const { smartAccount } = await authenticateAndSetupSmartAccount(provider, accounts, userInfo);
+              
+              // Update state and load initial data
+              await updateStateAndLoadData(set, get, provider, smartAccount, accounts, userInfo);
+            } catch (accountError) {
+              console.log('Failed to get accounts or authenticate:', accountError);
+              // User needs to login manually
+            }
           }
         }
+      } catch (error) {
+        console.error("Initialization failed:", error);
+      } finally {
+        set({ isInitializing: false });
+        isInitializing = false;
+        initializationPromise = null;
       }
-    } catch (error) {
-      console.error("Initialization failed:", error);
-    } finally {
-      set({ isInitializing: false });
-    }
+    })();
+
+    await initializationPromise;
   },
 
   // Login with Web3Auth

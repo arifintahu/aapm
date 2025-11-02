@@ -58,9 +58,22 @@ web3auth.configureAdapter(metamaskAdapter);
 export class Web3AuthService {
   private provider: IProvider | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   async init(): Promise<void> {
+    // Prevent multiple simultaneous initializations
     if (this.isInitialized) return;
+    
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      return;
+    }
+
+    this.initializationPromise = this.performInit();
+    await this.initializationPromise;
+  }
+
+  private async performInit(): Promise<void> {
     
     try {
       await web3auth.initModal({
@@ -152,6 +165,8 @@ export class Web3AuthService {
     } catch (error) {
       console.error("Web3Auth initialization failed:", error);
       throw error;
+    } finally {
+      this.initializationPromise = null;
     }
   }
 
@@ -239,6 +254,10 @@ export class Web3AuthService {
 
     try {
       console.log('Getting accounts from provider...');
+      
+      // Add a small delay to ensure provider is ready, especially after page refresh
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       const accounts = await this.provider.request({
         method: "eth_accounts",
       });
