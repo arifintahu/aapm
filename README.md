@@ -45,7 +45,6 @@ aapm/
 │   ├── vite.config.ts     # Vite configuration
 │   ├── tailwind.config.js # Tailwind CSS config
 │   └── package.json       # Frontend dependencies
-├── .trae/                 # Documentation
 └── package.json           # Workspace configuration
 ```
 
