@@ -29,6 +29,7 @@ export interface GaslessTransactionRequest {
   data: string;
   value?: string;
   signature?: string; // User-provided signature
+  signingMethod?: string; // Method used to generate the signature (eth_sign, personal_sign, signMessage, etc.)
 }
 
 export class GaslessService {
@@ -103,10 +104,23 @@ export class GaslessService {
     try {
       logger.info('Creating smart account', { ownerAddress });
 
-      const salt = ethers.keccak256(ethers.toUtf8Bytes(`${ownerAddress}-${Date.now()}-${Math.random()}`));
+      const salt = ethers.keccak256(ethers.toUtf8Bytes(`${ownerAddress}`));
       
       // Get predicted address
       const predictedAddress = await this.factoryContract.getSmartAccountAddress(ownerAddress, salt);
+      
+      // Check if smart account already exists by checking if there's code at the address
+      const code = await this.provider.getCode(predictedAddress);
+      
+      if (code !== '0x') {
+        // Smart account already exists
+        logger.info('Smart account already exists', {
+          owner: ownerAddress,
+          smartAccount: predictedAddress,
+          salt
+        });
+        return await this.getSmartAccountData(predictedAddress);
+      }
       
       // Create the smart account
       const tx = await this.factoryContract.createSmartAccount(ownerAddress, salt);
@@ -177,10 +191,15 @@ export class GaslessService {
    */
   async executeGaslessTransaction(
     ownerAddress: string,
-    transactions: GaslessTransactionRequest[]
+    transactions: GaslessTransactionRequest[],
+    providedNonce?: number
   ): Promise<{ txHash: string; smartAccount: string }> {
     try {
-      logger.info('Executing gasless transaction', { ownerAddress, transactionCount: transactions.length });
+      logger.info('Executing gasless transaction', { 
+        ownerAddress, 
+        transactionCount: transactions.length,
+        signingMethods: transactions.map(tx => tx.signingMethod || 'unknown')
+      });
 
       // Validate that all transactions have signatures
       for (const tx of transactions) {
@@ -203,21 +222,76 @@ export class GaslessService {
       const data = transactions.map(tx => tx.data);
 
       // Check current nonce and expected hash for signature validation
-      const currentNonce = await smartAccountContract.nonce();
-
-      // Get the expected hash for this transaction with current nonce
-      const expectedHash = await smartAccountContract.getTransactionHash(
-        to[0],
-        values[0],
-        data[0],
-        currentNonce
-      );
+      let currentNonce: bigint;
+      if (providedNonce !== undefined) {
+        currentNonce = BigInt(providedNonce);
+        logger.info('Using provided nonce for transaction execution', { providedNonce, currentNonce: currentNonce.toString() });
+      } else {
+        currentNonce = await smartAccountContract.nonce();
+        logger.info('Using current nonce from smart contract', { currentNonce: currentNonce.toString() });
+      }
 
       let txHash: string;
 
       if (transactions.length === 1) {
         // Single transaction - use the user-provided signature
-        const signature = transactions[0].signature!;
+        let signature = transactions[0].signature!;
+        const signingMethod = transactions[0].signingMethod || 'unknown';
+        
+        // Get the expected hash for this transaction with current nonce
+        const expectedHash = await smartAccountContract.getTransactionHash(
+          to[0],
+          values[0],
+          data[0],
+          currentNonce
+        );
+
+        // If signMessage was used, we need to verify against the prefixed hash
+        if (signingMethod === 'signMessage') {
+          logger.info('Handling signMessage signature with Ethereum message prefix');
+          
+          // signMessage adds the Ethereum message prefix to the bytes
+          // The frontend calls: signMessage(ethers.getBytes(expectedHash))
+          // This creates a message like: "\x19Ethereum Signed Message:\n32" + bytes(expectedHash)
+          const prefixedHash = ethers.hashMessage(ethers.getBytes(expectedHash));
+          
+          logger.info('Debug signMessage verification:', {
+            expectedHash,
+            prefixedHash,
+            signature,
+            ownerAddress
+          });
+          
+          // Verify the signature against the prefixed hash
+          try {
+            const recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
+            logger.info('Signature recovery result:', {
+              recoveredAddress,
+              expectedAddress: ownerAddress,
+              match: recoveredAddress.toLowerCase() === ownerAddress.toLowerCase()
+            });
+            
+            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+              throw new Error(`Signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
+            }
+            logger.info('signMessage signature verified successfully');
+          } catch (verifyError) {
+            logger.error('signMessage signature verification failed:', verifyError);
+            throw new Error('Invalid signature for signMessage method');
+          }
+        } else {
+          // For other signing methods, verify against the raw hash
+          try {
+            const recoveredAddress = ethers.recoverAddress(expectedHash, signature);
+            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+              throw new Error(`Signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
+            }
+            logger.info(`${signingMethod} signature verified successfully`);
+          } catch (verifyError) {
+            logger.error(`${signingMethod} signature verification failed:`, verifyError);
+            throw new Error(`Invalid signature for ${signingMethod} method`);
+          }
+        }
         
         const tx = await smartAccountContract.executeTransaction(
           to[0],
@@ -229,8 +303,63 @@ export class GaslessService {
         const receipt = await tx.wait();
         txHash = receipt.hash;
       } else {
-        // Batch transaction - for now, use the first signature (in production, you'd need a batch signature)
-        const signature = transactions[0].signature!;
+        // Batch transaction - use the first signature (in production, you'd need a batch signature)
+        let signature = transactions[0].signature!;
+        const signingMethod = transactions[0].signingMethod || 'unknown';
+        
+        // Get the expected hash for batch transaction with current nonce
+        const expectedHash = await smartAccountContract.getBatchTransactionHash(
+          to,
+          values,
+          data,
+          currentNonce
+        );
+
+        // If signMessage was used, we need to verify against the prefixed hash
+        if (signingMethod === 'signMessage') {
+          logger.info('Handling signMessage signature with Ethereum message prefix for batch transaction');
+          
+          // signMessage adds the Ethereum message prefix to the bytes
+          // The frontend calls: signMessage(ethers.getBytes(expectedHash))
+          // This creates a message like: "\x19Ethereum Signed Message:\n32" + bytes(expectedHash)
+          const hashBytes = ethers.getBytes(expectedHash);
+          const prefixedHash = ethers.hashMessage(hashBytes);
+          
+          // Debug logging for signMessage verification
+          logger.info('DEBUG signMessage verification:', {
+            expectedHash,
+            hashBytes: ethers.hexlify(hashBytes),
+            prefixedHash,
+            signature,
+            ownerAddress
+          });
+          
+          // Verify the signature against the prefixed hash
+          try {
+            const recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
+            logger.info('DEBUG signMessage recovered address:', recoveredAddress);
+            
+            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+              throw new Error(`Batch signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
+            }
+            logger.info('signMessage batch signature verified successfully');
+          } catch (verifyError) {
+            logger.error('signMessage batch signature verification failed:', verifyError);
+            throw new Error('Invalid batch signature for signMessage method');
+          }
+        } else {
+          // For other signing methods, verify against the raw hash
+          try {
+            const recoveredAddress = ethers.recoverAddress(expectedHash, signature);
+            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+              throw new Error(`Batch signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
+            }
+            logger.info(`${signingMethod} batch signature verified successfully`);
+          } catch (verifyError) {
+            logger.error(`${signingMethod} batch signature verification failed:`, verifyError);
+            throw new Error(`Invalid batch signature for ${signingMethod} method`);
+          }
+        }
         
         const tx = await smartAccountContract.executeBatchTransaction(
           to,

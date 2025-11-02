@@ -127,66 +127,145 @@ export class GaslessService {
       if (hashResponse.ok) {
         const hashResult = await hashResponse.json();
         const txHashToSign = hashResult.data.txHash;
+        const nonce = hashResult.data.nonce; // Store the nonce for later use
         
         // Step 2: Sign the transaction hash with user's wallet
-        // Instead of signing the pre-computed hash, we need to use EIP-712 signing
-        // which Web3Auth supports through signTypedData
         let signature: string;
+        let signingMethod = 'unknown';
+        
         try {
-          // Get chain ID for EIP-712 domain
-          const network = await this.smartAccount.signer.provider!.getNetwork();
-          const chainId = Number(network.chainId);
-          
-          // EIP-712 domain for the smart account
-           const domain = {
-             name: "SmartAccount",
-             version: "1",
-             chainId: chainId,
-             verifyingContract: hashResult.data.smartAccount
-           };
-          
-          // EIP-712 types for single transaction
-          const types = {
-            Transaction: [
-              { name: "to", type: "address" },
-              { name: "value", type: "uint256" },
-              { name: "data", type: "bytes" },
-              { name: "nonce", type: "uint256" }
-            ]
-          };
-          
-          // Transaction data for EIP-712
-          const message = {
-            to: to,
-            value: value || "0",
-            data: data,
-            nonce: hashResult.data.nonce
-          };
-          
-          // Use EIP-712 signing (Web3Auth compatible)
-          signature = await (this.smartAccount.signer as any).signTypedData(domain, types, message);
-      } catch (eip712Error) {
-          // Try fallback methods
+          // First try eth_sign (raw signing without prefix) - this is what we want
+          console.log('Attempting eth_sign with hash:', txHashToSign);
+          signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
+            await this.smartAccount.signer.getAddress(),
+            txHashToSign
+          ]);
+          signingMethod = 'eth_sign';
+          console.log('Successfully signed with eth_sign');
+        } catch (ethSignError) {
+          console.log('eth_sign failed:', ethSignError.message);
           try {
-            // First try eth_sign (raw signing without prefix)
-            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
-              await this.smartAccount.signer.getAddress(),
-              txHashToSign
+            // Fallback to personal_sign
+            console.log('Attempting personal_sign with hash:', txHashToSign);
+            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
+              txHashToSign,
+              await this.smartAccount.signer.getAddress()
             ]);
-          } catch (ethSignError) {
-              // Try personal_sign
-              try {
-                // Fallback to personal_sign
-              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
-                txHashToSign,
-                await this.smartAccount.signer.getAddress()
+            signingMethod = 'personal_sign';
+            console.log('Successfully signed with personal_sign');
+          } catch (personalSignError) {
+            console.log('personal_sign failed:', personalSignError.message);
+            try {
+              // Try signTypedData for EIP-712 structured data (Web3Auth should support this)
+              console.log('Attempting signTypedData for EIP-712 structured data');
+              
+              // We need to reconstruct the EIP-712 domain and message from the hash
+              // Since we have the final hash, we need to work backwards to create the typed data
+              // This is complex, so let's try a simpler approach first
+              
+              // Try eth_signTypedData_v4
+              const typedData = {
+                types: {
+                  EIP712Domain: [
+                    { name: 'name', type: 'string' },
+                    { name: 'version', type: 'string' },
+                    { name: 'chainId', type: 'uint256' },
+                    { name: 'verifyingContract', type: 'address' }
+                  ],
+                  BatchTransaction: [
+                    { name: 'to', type: 'address[]' },
+                    { name: 'values', type: 'uint256[]' },
+                    { name: 'data', type: 'bytes32[]' },
+                    { name: 'nonce', type: 'uint256' }
+                  ]
+                },
+                primaryType: 'BatchTransaction',
+                domain: {
+                  name: 'SmartAccount',
+                  version: '1',
+                  chainId: this.getNumericChainId(),
+                  verifyingContract: this.smartAccount.address
+                },
+                message: {
+                  to: [to],
+                  values: [value],
+                  data: [ethers.keccak256(ethers.getBytes(data))],
+                  nonce: parseInt(nonce)
+                }
+              };
+              
+              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_signTypedData_v4", [
+                await this.smartAccount.signer.getAddress(),
+                JSON.stringify(typedData)
               ]);
-            } catch (personalSignError) {
-                // Last resort: signMessage (adds prefix)
-              signature = await this.smartAccount.signer.signMessage(ethers.getBytes(txHashToSign));
+              signingMethod = 'signTypedData';
+              console.log('Successfully signed with signTypedData');
+            } catch (signTypedDataError) {
+              console.log('signTypedData failed:', signTypedDataError.message);
+              try {
+                // Last resort: signMessage (adds prefix, but we'll send the signing method to backend)
+                console.log('Attempting signMessage with hash bytes');
+                const hashBytes = ethers.getBytes(txHashToSign);
+                signature = await this.smartAccount.signer.signMessage(hashBytes);
+                signingMethod = 'signMessage';
+                console.log('Successfully signed with signMessage');
+              } catch (signMessageError) {
+                console.log('signMessage failed:', signMessageError.message);
+                throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
+              }
             }
           }
         }
+        
+        // Ensure signature has 0x prefix
+        if (!signature.startsWith('0x')) {
+          signature = '0x' + signature;
+        }
+        
+        // Check signature length and format
+        console.log('Raw signature:', signature);
+        console.log('Signature length:', signature.length);
+        
+        // Ensure signature is 65 bytes (130 hex chars + 0x prefix = 132 total)
+        if (signature.length === 130) {
+          // Missing 0x prefix, add it
+          signature = '0x' + signature;
+        }
+        
+        if (signature.length === 130) {
+          // 64 bytes - missing recovery ID, need to add it
+          console.log('Signature missing recovery ID, attempting to recover it...');
+          
+          // Try to recover the correct v value
+          // For signMessage, we need to use the prefixed hash for recovery
+          let messageHashForRecovery;
+          if (signingMethod === 'signMessage') {
+            // signMessage adds Ethereum message prefix, so we need to use the prefixed hash for recovery
+            messageHashForRecovery = ethers.hashMessage(ethers.getBytes(txHashToSign));
+          } else {
+            // For other methods, use the raw hash
+            messageHashForRecovery = ethers.getBytes(txHashToSign);
+          }
+          
+          for (let recovery = 0; recovery <= 1; recovery++) {
+            const testSig = signature + (recovery + 27).toString(16).padStart(2, '0');
+            try {
+              const recoveredAddress = ethers.recoverAddress(messageHashForRecovery, testSig);
+              const signerAddress = await this.smartAccount.signer.getAddress();
+              if (recoveredAddress.toLowerCase() === signerAddress.toLowerCase()) {
+                signature = testSig;
+                console.log('Successfully recovered signature with v =', recovery + 27);
+                break;
+              }
+            } catch (e) {
+              // Continue trying
+            }
+          }
+        }
+        
+        console.log('Final signature:', signature);
+        console.log('Signing method used:', signingMethod);
+        console.log('Final signature length:', signature.length);
         
         // Step 3: Send the signed transaction to backend
         const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
@@ -195,30 +274,23 @@ export class GaslessService {
           body: JSON.stringify({
             ownerAddress,
             transactions: [{ to, data, value }],
-            signature
+            signature,
+            signingMethod, // Include the signing method so backend can handle different formats
+            nonce // Include the nonce to ensure consistent hash calculation
           })
         });
 
         if (response.ok) {
           const result = await response.json();
           return result.data.txHash;
+        } else {
+          // If gasless transaction fails, throw an error instead of falling back to EOA
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(`Gasless transaction failed: ${errorData.error || response.statusText}`);
         }
+      } else {
+        throw new Error('Failed to get transaction hash from backend');
       }
-
-      // Fallback to direct EOA transaction
-      // Backend gasless failed, fall back to EOA transaction
-      const tx = await this.smartAccount.signer.sendTransaction({
-        to,
-        data,
-        value: ethers.parseEther(value || "0")
-      });
-
-      const receipt = await tx.wait();
-      if (!receipt) {
-        throw new Error("Transaction failed");
-      }
-
-      return receipt.hash;
     } catch (error) {
       console.error("Error executing transaction:", error);
       throw error;
@@ -255,12 +327,141 @@ export class GaslessService {
       if (hashResponse.ok) {
         const hashResult = await hashResponse.json();
         const txHashToSign = hashResult.data.txHash;
+        const nonce = hashResult.data.nonce; // Store the nonce for later use
         
-        // Step 2: Sign the transaction hash with user's wallet (raw signature without message prefix)
-        const signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
-          await this.smartAccount.signer.getAddress(),
-          txHashToSign
-        ]);
+        // Step 2: Sign the transaction hash with user's wallet
+        let signature: string;
+        let signingMethod = 'unknown';
+        
+        try {
+          // First try eth_signTypedData_v4 for EIP-712 structured data
+          console.log('Attempting eth_signTypedData_v4 with structured data');
+          const typedData = {
+            types: {
+              EIP712Domain: [
+                { name: "name", type: "string" },
+                { name: "version", type: "string" },
+                { name: "chainId", type: "uint256" },
+                { name: "verifyingContract", type: "address" }
+              ],
+              BatchTransaction: [
+                { name: "to", type: "address[]" },
+                { name: "data", type: "bytes[]" },
+                { name: "value", type: "uint256[]" },
+                { name: "nonce", type: "uint256" }
+              ]
+            },
+            primaryType: "BatchTransaction",
+            domain: {
+              name: "SmartAccount",
+              version: "1",
+              chainId: this.getNumericChainId(),
+              verifyingContract: this.smartAccount.address
+            },
+            message: {
+              to: transactions.map(tx => tx.to),
+              data: transactions.map(tx => tx.data),
+              value: transactions.map(tx => tx.value || '0'),
+              nonce: hashResult.data.nonce || 0
+            }
+          };
+          
+          signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_signTypedData_v4", [
+            await this.smartAccount.signer.getAddress(),
+            JSON.stringify(typedData)
+          ]);
+          signingMethod = 'eth_signTypedData_v4';
+          console.log('Successfully signed with eth_signTypedData_v4');
+        } catch (typedDataError) {
+          console.log('eth_signTypedData_v4 failed:', typedDataError.message);
+          try {
+            // Fallback to eth_sign (raw signing without prefix)
+            console.log('Attempting eth_sign with hash:', txHashToSign);
+            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
+              await this.smartAccount.signer.getAddress(),
+              txHashToSign
+            ]);
+            signingMethod = 'eth_sign';
+            console.log('Successfully signed with eth_sign');
+          } catch (ethSignError) {
+            console.log('eth_sign failed:', ethSignError.message);
+            try {
+              // Fallback to personal_sign
+              console.log('Attempting personal_sign with hash:', txHashToSign);
+              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
+                txHashToSign,
+                await this.smartAccount.signer.getAddress()
+              ]);
+              signingMethod = 'personal_sign';
+              console.log('Successfully signed with personal_sign');
+            } catch (personalSignError) {
+              console.log('personal_sign failed:', personalSignError.message);
+              try {
+                // Last resort: signMessage (adds prefix)
+                console.log('Attempting signMessage with hash bytes');
+                const hashBytes = ethers.getBytes(txHashToSign);
+                console.log('Hash bytes to sign:', ethers.hexlify(hashBytes));
+                console.log('Original hash:', txHashToSign);
+                signature = await this.smartAccount.signer.signMessage(hashBytes);
+                signingMethod = 'signMessage';
+                console.log('Successfully signed with signMessage');
+              } catch (signMessageError) {
+                console.log('signMessage failed:', signMessageError.message);
+                throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
+              }
+            }
+          }
+        }
+        
+        // Ensure signature has 0x prefix
+        if (!signature.startsWith('0x')) {
+          signature = '0x' + signature;
+        }
+        
+        // Check signature length and format
+        console.log('Raw signature:', signature);
+        console.log('Signature length:', signature.length);
+        
+        // Ensure signature is 65 bytes (130 hex chars + 0x prefix = 132 total)
+        if (signature.length === 130) {
+          // Missing 0x prefix, add it
+          signature = '0x' + signature;
+        }
+        
+        if (signature.length === 130) {
+          // 64 bytes - missing recovery ID, need to add it
+          console.log('Signature missing recovery ID, attempting to recover it...');
+          
+          // Try to recover the correct v value
+          // For signMessage, we need to use the prefixed hash for recovery
+          let messageHashForRecovery;
+          if (signingMethod === 'signMessage') {
+            // signMessage adds Ethereum message prefix, so we need to use the prefixed hash for recovery
+            messageHashForRecovery = ethers.hashMessage(ethers.getBytes(txHashToSign));
+          } else {
+            // For other methods, use the raw hash
+            messageHashForRecovery = ethers.getBytes(txHashToSign);
+          }
+          
+          for (let recovery = 0; recovery <= 1; recovery++) {
+            const testSig = signature + (recovery + 27).toString(16).padStart(2, '0');
+            try {
+              const recoveredAddress = ethers.recoverAddress(messageHashForRecovery, testSig);
+              const signerAddress = await this.smartAccount.signer.getAddress();
+              if (recoveredAddress.toLowerCase() === signerAddress.toLowerCase()) {
+                signature = testSig;
+                console.log('Successfully recovered signature with v =', recovery + 27);
+                break;
+              }
+            } catch (e) {
+              // Continue trying
+            }
+          }
+        }
+        
+        console.log('Final signature:', signature);
+        console.log('Signing method used:', signingMethod);
+        console.log('Final signature length:', signature.length);
         
         // Step 3: Send the signed transaction to backend
         const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
@@ -273,35 +474,23 @@ export class GaslessService {
               data: tx.data,
               value: tx.value || '0'
             })),
-            signature
+            signature,
+            signingMethod, // Include the signing method so backend can handle different formats
+            nonce // Include the nonce to ensure consistent hash calculation
           })
         });
 
         if (response.ok) {
           const result = await response.json();
           return result.data.txHash;
+        } else {
+          // If gasless transaction fails, throw an error instead of falling back to EOA
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(`Gasless transaction failed: ${errorData.error || response.statusText}`);
         }
+      } else {
+        throw new Error('Failed to get transaction hash from backend');
       }
-
-      // Fallback to sequential EOA transactions
-      // Backend gasless failed, fall back to sequential EOA transactions
-      let lastTxHash = '';
-      
-      for (const tx of transactions) {
-        const transaction = await this.smartAccount.signer.sendTransaction({
-          to: tx.to,
-          data: tx.data,
-          value: ethers.parseEther(tx.value || "0")
-        });
-
-        const receipt = await transaction.wait();
-        if (!receipt) {
-          throw new Error(`Transaction failed: ${tx.to}`);
-        }
-        lastTxHash = receipt.hash;
-      }
-
-      return lastTxHash;
     } catch (error) {
       console.error("Error executing batch transaction:", error);
       throw error;

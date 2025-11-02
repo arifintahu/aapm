@@ -444,7 +444,7 @@ router.post('/estimate-gas', authMiddleware, async (req: Request, res: Response)
  */
 router.post('/send-bundle', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { ownerAddress, transactions, signature } = req.body;
+    const { ownerAddress, transactions, signature, signingMethod, nonce } = req.body;
 
     // Validate input
     if (!ownerAddress || !Array.isArray(transactions) || transactions.length === 0) {
@@ -470,7 +470,8 @@ router.post('/send-bundle', authMiddleware, async (req: Request, res: Response):
 
     logger.info('Executing bundle transaction', { 
       ownerAddress, 
-      transactionCount: transactions.length 
+      transactionCount: transactions.length,
+      signingMethod: signingMethod || 'unknown'
     });
 
     // Normalize transactions and add signature to each transaction
@@ -478,13 +479,15 @@ router.post('/send-bundle', authMiddleware, async (req: Request, res: Response):
       to: tx.to,
       data: tx.data,
       value: tx.value || '0',
-      signature: tx.signature || signature // Use transaction-specific signature or global signature
+      signature: tx.signature || signature, // Use transaction-specific signature or global signature
+      signingMethod: signingMethod || 'unknown' // Pass signing method for proper verification
     }));
 
     // Execute gasless bundle
     const result = await gaslessService.executeGaslessTransaction(
       ownerAddress,
-      normalizedTransactions
+      normalizedTransactions,
+      nonce // Pass the nonce from the frontend
     );
 
     const response: ApiResponse = {
@@ -550,6 +553,14 @@ router.post('/get-tx-hash', authMiddleware, async (req: Request, res: Response):
         ownerAddress,
         transactions
       );
+
+      logger.info('DEBUG: get-tx-hash batch response', {
+        ownerAddress,
+        transactions: transactions.length,
+        txHash: result.txHash,
+        smartAccount: result.smartAccount,
+        nonce: result.nonce
+      });
 
       const response: ApiResponse = {
         success: true,

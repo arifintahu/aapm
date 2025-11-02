@@ -23,7 +23,7 @@ async function main() {
   // Create a test smart account to verify deployment
   console.log("\nCreating test smart account...");
   const testOwner = ethers.Wallet.createRandom().address;
-  const salt = ethers.randomBytes(32);
+  const salt = ethers.keccak256(ethers.toUtf8Bytes(`${testOwner}`));
   
   // Get predicted address
   const predictedAddress = await factory.getSmartAccountAddress(testOwner, salt);

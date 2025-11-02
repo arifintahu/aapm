@@ -205,9 +205,21 @@ contract SmartAccount is ReentrancyGuard {
     
     /**
      * @dev Verify signature from owner
+     * Supports both EIP-712 signatures and Ethereum message signatures (signMessage)
      */
     function _verifySignature(bytes32 hash, bytes calldata signature) internal view returns (bool) {
+        // First try EIP-712 signature (direct hash recovery)
         address signer = hash.recover(signature);
+        if (signer == owner) {
+            return true;
+        }
+        
+        // If EIP-712 fails, try Ethereum message signature (with prefix)
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked(
+            "\x19Ethereum Signed Message:\n32",
+            hash
+        ));
+        signer = ethSignedMessageHash.recover(signature);
         return signer == owner;
     }
     
