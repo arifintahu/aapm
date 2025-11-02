@@ -448,6 +448,18 @@ class PostgreSQLStorage {
     }
   }
 
+  async getSmartAccountsByOwner(ownerAddress: string): Promise<SmartAccountData[]> {
+    const query = 'SELECT * FROM smart_accounts WHERE owner = $1 ORDER BY created_at ASC';
+    
+    try {
+      const result = await database.query(query, [ownerAddress.toLowerCase()]);
+      return result.rows.map((row: any) => this.mapSmartAccountFromDb(row));
+    } catch (error) {
+      logger.error('Failed to get smart accounts by owner:', error);
+      throw error;
+    }
+  }
+
   async updateSmartAccount(address: string, updates: Partial<SmartAccountData>): Promise<SmartAccountData | undefined> {
     const fields: string[] = [];
     const values: any[] = [];

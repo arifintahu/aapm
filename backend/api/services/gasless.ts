@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/environment.js';
+import { storage } from '../storage/index.js';
+import { SmartAccountData } from '../types/index.js';
 
 // Smart Account Factory ABI (minimal required functions)
 const SMART_ACCOUNT_FACTORY_ABI = [
@@ -27,13 +29,6 @@ export interface GaslessTransactionRequest {
   data: string;
   value?: string;
   signature?: string; // User-provided signature
-}
-
-export interface SmartAccountData {
-  address: string;
-  owner: string;
-  gasPayer: string;
-  nonce: number;
 }
 
 export class GaslessService {
@@ -69,6 +64,36 @@ export class GaslessService {
       gasPayerAddress: this.gasPayerWallet.address,
       factoryAddress
     });
+  }
+
+  /**
+   * Get or create smart account - checks database first, then blockchain, then creates new if needed
+   */
+  async getOrCreateSmartAccount(walletAddress: string): Promise<SmartAccountData> {
+    try {
+      // First, check database for existing smart accounts
+      const existingAccounts = await storage.getSmartAccountsByOwner(walletAddress);
+      
+      if (existingAccounts.length > 0) {
+        logger.info(`Found existing smart account in database: ${existingAccounts[0].address}`, {
+          walletAddress,
+          accountCount: existingAccounts.length,
+        });
+        return existingAccounts[0];
+      }
+
+      // If not in database, use createSmartAccount (which checks blockchain and creates if needed)
+      const smartAccountData = await this.createSmartAccount(walletAddress);
+      
+      logger.info(`Smart account retrieved/created via gasless service: ${smartAccountData.address}`, {
+        walletAddress,
+      });
+      
+      return smartAccountData;
+    } catch (error) {
+      logger.error('Failed to get or create smart account:', { walletAddress, error });
+      throw error;
+    }
   }
 
   /**
@@ -126,21 +151,28 @@ export class GaslessService {
         this.provider
       );
 
-      const [owner, gasPayer, nonce] = await Promise.all([
+      const [owner, nonce] = await Promise.all([
         smartAccountContract.owner(),
-        smartAccountContract.gasPayer(),
         smartAccountContract.nonce()
       ]);
 
       const data: SmartAccountData = {
         address: smartAccountAddress,
         owner,
-        gasPayer,
+        isDeployed: true, // If we can query it, it's deployed
         nonce: Number(nonce)
       };
 
       // Cache the data
       this.smartAccountCache.set(smartAccountAddress, data);
+      
+      // Store in database
+      try {
+        await storage.createSmartAccount(data);
+      } catch (dbError) {
+        logger.warn('Failed to store smart account in database:', { smartAccountAddress, dbError });
+        // Continue even if database storage fails
+      }
       
       return data;
     } catch (error) {

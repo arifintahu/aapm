@@ -57,16 +57,16 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
       };
 
       try {
-        // Create smart account for the user
-        const smartAccountData = await gaslessService.createSmartAccount(walletAddress);
+        // Get or create smart account for the user (checks database first)
+        const smartAccountData = await gaslessService.getOrCreateSmartAccount(walletAddress);
         user.smartAccountAddress = smartAccountData.address;
         
-        logger.info(`Smart account created for new user: ${smartAccountData.address}`, {
+        logger.info(`Smart account assigned to new user: ${smartAccountData.address}`, {
           userId,
           walletAddress,
         });
       } catch (smartAccountError) {
-        logger.error('Failed to create smart account for new user:', smartAccountError);
+        logger.error('Failed to get or create smart account for new user:', smartAccountError);
         // Continue without smart account - it can be created later
       }
 
@@ -90,15 +90,15 @@ router.post('/web3auth', async (req: Request, res: Response): Promise<void> => {
       // Create smart account if not exists
       if (!user.smartAccountAddress) {
         try {
-          const smartAccountData = await gaslessService.createSmartAccount(walletAddress);
+          const smartAccountData = await gaslessService.getOrCreateSmartAccount(walletAddress);
           updates.smartAccountAddress = smartAccountData.address;
           
-          logger.info(`Smart account created for existing user: ${smartAccountData.address}`, {
+          logger.info(`Smart account assigned to existing user: ${smartAccountData.address}`, {
             userId: user.id,
             walletAddress,
           });
         } catch (smartAccountError) {
-          logger.error('Failed to create smart account for existing user:', smartAccountError);
+          logger.error('Failed to get or create smart account for existing user:', smartAccountError);
         }
       }
 
