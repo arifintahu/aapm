@@ -103,17 +103,7 @@ export class GaslessService {
     try {
       logger.info('Creating smart account', { ownerAddress });
 
-      // Check if user already has smart accounts
-      const existingAccounts = await this.factoryContract.getUserSmartAccounts(ownerAddress);
-      
-      if (existingAccounts.length > 0) {
-        // Return the first existing smart account
-        const smartAccountAddress = existingAccounts[0];
-        return await this.getSmartAccountData(smartAccountAddress);
-      }
-
-      // Create new smart account
-      const salt = ethers.randomBytes(32);
+      const salt = ethers.keccak256(ethers.toUtf8Bytes(`${ownerAddress}-${Date.now()}-${Math.random()}`));
       
       // Get predicted address
       const predictedAddress = await this.factoryContract.getSmartAccountAddress(ownerAddress, salt);
@@ -125,7 +115,8 @@ export class GaslessService {
       logger.info('Smart account created', {
         owner: ownerAddress,
         smartAccount: predictedAddress,
-        txHash: tx.hash
+        txHash: tx.hash,
+        salt
       });
 
       return await this.getSmartAccountData(predictedAddress);
@@ -210,6 +201,17 @@ export class GaslessService {
       const to = transactions.map(tx => tx.to);
       const values = transactions.map(tx => tx.value || '0');
       const data = transactions.map(tx => tx.data);
+
+      // Check current nonce and expected hash for signature validation
+      const currentNonce = await smartAccountContract.nonce();
+
+      // Get the expected hash for this transaction with current nonce
+      const expectedHash = await smartAccountContract.getTransactionHash(
+        to[0],
+        values[0],
+        data[0],
+        currentNonce
+      );
 
       let txHash: string;
 

@@ -35,8 +35,6 @@ export class GaslessService {
 
   async createSmartAccountFromProvider(web3AuthProvider: IProvider, smartAccountAddress?: string): Promise<SmartAccount> {
     try {
-      console.log(`[${new Date().toISOString()}] Creating smart account from provider (NEW METHOD)...`, { smartAccountAddress });
-      
       let provider: ethers.AbstractProvider;
       let signer: ethers.Signer;
 
@@ -65,12 +63,10 @@ export class GaslessService {
               }) as string[];
               
               if (!accounts || accounts.length === 0) {
-                console.log(`Attempt ${retryCount + 1}: No accounts found, retrying in 500ms...`);
                 await new Promise(resolve => setTimeout(resolve, 500));
                 retryCount++;
               }
             } catch (accountError) {
-              console.log(`Attempt ${retryCount + 1}: Error getting accounts:`, accountError);
               await new Promise(resolve => setTimeout(resolve, 500));
               retryCount++;
             }
@@ -79,8 +75,6 @@ export class GaslessService {
           if (!accounts || accounts.length === 0) {
             throw new Error("No accounts found after retries - Web3Auth may not be fully initialized");
           }
-
-          console.log(`Successfully retrieved accounts after ${retryCount} retries:`, accounts);
           provider = browserProvider;
           signer = await browserProvider.getSigner(accounts[0]);
         } catch (error) {
@@ -91,8 +85,6 @@ export class GaslessService {
 
       // Use the smart account address from parameter if available, otherwise use signer address
       const address = smartAccountAddress || await signer.getAddress();
-      
-      console.log("Smart account created from provider:", { address, smartAccountAddress });
       
       this.smartAccount = {
         address,
@@ -136,11 +128,65 @@ export class GaslessService {
         const hashResult = await hashResponse.json();
         const txHashToSign = hashResult.data.txHash;
         
-        // Step 2: Sign the transaction hash with user's wallet (raw signature without message prefix)
-        const signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
-          await this.smartAccount.signer.getAddress(),
-          txHashToSign
-        ]);
+        // Step 2: Sign the transaction hash with user's wallet
+        // Instead of signing the pre-computed hash, we need to use EIP-712 signing
+        // which Web3Auth supports through signTypedData
+        let signature: string;
+        try {
+          // Get chain ID for EIP-712 domain
+          const network = await this.smartAccount.signer.provider!.getNetwork();
+          const chainId = Number(network.chainId);
+          
+          // EIP-712 domain for the smart account
+           const domain = {
+             name: "SmartAccount",
+             version: "1",
+             chainId: chainId,
+             verifyingContract: hashResult.data.smartAccount
+           };
+          
+          // EIP-712 types for single transaction
+          const types = {
+            Transaction: [
+              { name: "to", type: "address" },
+              { name: "value", type: "uint256" },
+              { name: "data", type: "bytes" },
+              { name: "nonce", type: "uint256" }
+            ]
+          };
+          
+          // Transaction data for EIP-712
+          const message = {
+            to: to,
+            value: value || "0",
+            data: data,
+            nonce: hashResult.data.nonce
+          };
+          
+          // Use EIP-712 signing (Web3Auth compatible)
+          signature = await (this.smartAccount.signer as any).signTypedData(domain, types, message);
+      } catch (eip712Error) {
+          // Try fallback methods
+          try {
+            // First try eth_sign (raw signing without prefix)
+            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
+              await this.smartAccount.signer.getAddress(),
+              txHashToSign
+            ]);
+          } catch (ethSignError) {
+              // Try personal_sign
+              try {
+                // Fallback to personal_sign
+              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
+                txHashToSign,
+                await this.smartAccount.signer.getAddress()
+              ]);
+            } catch (personalSignError) {
+                // Last resort: signMessage (adds prefix)
+              signature = await this.smartAccount.signer.signMessage(ethers.getBytes(txHashToSign));
+            }
+          }
+        }
         
         // Step 3: Send the signed transaction to backend
         const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
@@ -155,13 +201,12 @@ export class GaslessService {
 
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ Backend gasless execution successful:', result.data.txHash);
           return result.data.txHash;
         }
       }
 
       // Fallback to direct EOA transaction
-      console.log('⚠️ Backend gasless failed, falling back to EOA transaction');
+      // Backend gasless failed, fall back to EOA transaction
       const tx = await this.smartAccount.signer.sendTransaction({
         to,
         data,
@@ -234,13 +279,12 @@ export class GaslessService {
 
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ Backend gasless batch execution successful:', result.data.txHash);
           return result.data.txHash;
         }
       }
 
       // Fallback to sequential EOA transactions
-      console.log('⚠️ Backend gasless failed, falling back to sequential EOA transactions');
+      // Backend gasless failed, fall back to sequential EOA transactions
       let lastTxHash = '';
       
       for (const tx of transactions) {

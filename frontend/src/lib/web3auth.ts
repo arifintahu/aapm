@@ -158,7 +158,6 @@ export class Web3AuthService {
         
         // Add a small delay to ensure Web3Auth provider is fully ready after page reload
         if (this.provider) {
-          console.log('Web3Auth already connected, waiting for provider to be ready...');
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
@@ -176,19 +175,16 @@ export class Web3AuthService {
     }
 
     try {
-      console.log('Attempting Web3Auth login...');
       const provider = await web3auth.connect();
       if (!provider) {
         throw new Error("Failed to connect to Web3Auth");
       }
       
-      console.log('Web3Auth login successful, provider:', provider);
       this.provider = provider;
       
       // Verify accounts are available immediately after login
       try {
         const accounts = await provider.request({ method: "eth_accounts" });
-        console.log('Accounts immediately after login:', accounts);
       } catch (accountError) {
         console.warn('Could not get accounts immediately after login:', accountError);
       }
@@ -253,15 +249,12 @@ export class Web3AuthService {
     }
 
     try {
-      console.log('Getting accounts from provider...');
-      
       // Add a small delay to ensure provider is ready, especially after page refresh
       await new Promise(resolve => setTimeout(resolve, 50));
       
       const accounts = await this.provider.request({
         method: "eth_accounts",
       });
-      console.log('Accounts received:', accounts);
       return accounts as string[];
     } catch (error) {
       console.error("Failed to get accounts:", error);

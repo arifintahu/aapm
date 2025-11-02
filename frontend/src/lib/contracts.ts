@@ -241,27 +241,19 @@ export class ContractService {
       throw new Error("Mock USDC contract not initialized");
     }
 
-    console.log("claimFromFaucet called with targetAddress:", targetAddress);
-
     try {
       let tx;
       if (targetAddress) {
-        console.log("Using faucetTo function with target:", targetAddress);
-        
         // Estimate gas first
         const gasEstimate = await this.mockUSDCContract.faucetTo.estimateGas(targetAddress);
-        console.log("Gas estimate:", gasEstimate.toString());
         
         // Use faucetTo to mint to specific address (smart account) with explicit gas
         tx = await this.mockUSDCContract.faucetTo(targetAddress, {
           gasLimit: gasEstimate * 120n / 100n, // Add 20% buffer
         });
       } else {
-        console.log("Using regular faucet function");
-        
         // Estimate gas first
         const gasEstimate = await this.mockUSDCContract.faucet.estimateGas();
-        console.log("Gas estimate:", gasEstimate.toString());
         
         // Use regular faucet to mint to msg.sender (wallet address) with explicit gas
         tx = await this.mockUSDCContract.faucet({
@@ -269,9 +261,7 @@ export class ContractService {
         });
       }
       
-      console.log("Transaction sent:", tx.hash);
       await tx.wait();
-      console.log("Transaction confirmed:", tx.hash);
       return tx.hash;
     } catch (error: any) {
       console.error("Error in claimFromFaucet:", error);

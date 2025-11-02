@@ -580,6 +580,16 @@ router.post('/get-tx-hash', authMiddleware, async (req: Request, res: Response):
         data
       );
 
+      logger.info('DEBUG: get-tx-hash response', {
+        ownerAddress,
+        to,
+        value,
+        data,
+        txHash: result.txHash,
+        smartAccount: result.smartAccount,
+        nonce: result.nonce
+      });
+
       const response: ApiResponse = {
         success: true,
         data: {

@@ -45,7 +45,7 @@ export default function LoginButton() {
         <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 text-center">
           <Shield className="h-8 w-8 text-green-400 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-white mb-2">Secure & Safe</h3>
-          <p className="text-gray-300 text-sm">Enterprise-grade security with Web3Auth technology</p>
+          <p className="text-gray-300 text-sm">Gasless Smart Account with user authorization</p>
         </div>
       </div>
 

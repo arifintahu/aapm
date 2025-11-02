@@ -7,9 +7,7 @@ import { contractService, PredictionEvent, UserBet, Outcome } from "./contracts"
 import { backendAuthService } from "./backend-auth";
 import toast from "react-hot-toast";
 
-console.log(`[${new Date().toISOString()}] STORE MODULE LOADED`);
-
-// Helper function to get accounts with retry logic
+// Utility function to get accounts with retry logic
 const getAccountsWithRetry = async (context: 'login' | 'initialize', maxRetries: number = 5, retryDelay: number = 500): Promise<string[]> => {
   let accounts: string[] = [];
   let retryCount = 0;
@@ -18,18 +16,17 @@ const getAccountsWithRetry = async (context: 'login' | 'initialize', maxRetries:
     try {
       accounts = await web3AuthService.getAccounts();
       if (!accounts || accounts.length === 0) {
-        console.log(`${context} attempt ${retryCount + 1}: No accounts found, retrying in ${retryDelay}ms...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         retryCount++;
       }
     } catch (accountError) {
-      console.log(`${context} attempt ${retryCount + 1}: Error getting accounts:`, accountError);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
-      retryCount++;
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        retryCount++;
+        continue;
+      }
     }
-  }
-  
-  if (!accounts || accounts.length === 0) {
+    
+    if (!accounts || accounts.length === 0) {
     throw new Error(`Unable to retrieve wallet address after ${context}. Please try again.`);
   }
   
@@ -161,8 +158,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Actions
   initialize: async () => {
-    console.log(`[${new Date().toISOString()}] INITIALIZE FUNCTION CALLED - NEW VERSION`);
-    
     // Prevent multiple simultaneous initializations
     if (isInitializing) {
       console.log('Initialization already in progress, waiting for completion...');
@@ -412,9 +407,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (!smartAccount || !contractService.isContractsInitialized()) {
         throw new Error("Not connected");
       }
+
+      // Ensure gasless service has the smart account
+      if (!gaslessService.getSmartAccount()) {
+        throw new Error("Gasless service not properly initialized");
+      }
       
       const targetAddress = smartAccount.address; // Use smart account address
-      console.log("Claiming faucet for smart account:", targetAddress);
       
       // Get contract addresses
       const contracts = contractService.getContractAddresses();
@@ -432,8 +431,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         txData,
         "0"
       );
-      
-      console.log("Faucet transaction successful:", txHash);
       
       // Reload balance
       await get().loadBalance();
