@@ -137,7 +137,7 @@ export class GaslessService {
         const txHashToSign = hashResult.data.txHash;
         
         // Step 2: Sign the transaction hash with user's wallet (raw signature without message prefix)
-        const signature = await this.smartAccount.signer.provider!.send("eth_sign", [
+        const signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
           await this.smartAccount.signer.getAddress(),
           txHashToSign
         ]);
@@ -212,7 +212,7 @@ export class GaslessService {
         const txHashToSign = hashResult.data.txHash;
         
         // Step 2: Sign the transaction hash with user's wallet (raw signature without message prefix)
-        const signature = await this.smartAccount.signer.provider!.send("eth_sign", [
+        const signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
           await this.smartAccount.signer.getAddress(),
           txHashToSign
         ]);
