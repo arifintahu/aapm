@@ -46,7 +46,7 @@ graph TD
 ### 🚀 One-Command Setup
 ```bash
 # Clone and install everything
-git clone <repository-url>
+git clone https://github.com/arifintahu/aapm.git
 cd aapm
 npm run install:all
 ```
