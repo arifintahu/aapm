@@ -14,6 +14,7 @@ export default function Home() {
     isInitializing, 
     events, 
     loadEvents, 
+    loadBalance,
     initialize,
     isLoading 
   } = useAppStore();
@@ -27,8 +28,9 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated) {
       loadEvents();
+      loadBalance();
     }
-  }, [isAuthenticated, loadEvents]);
+  }, [isAuthenticated, loadEvents, loadBalance]);
 
   const handleEventCreated = () => {
     loadEvents(); // Refresh events after creating a new one
