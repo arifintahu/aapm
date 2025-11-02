@@ -60,7 +60,7 @@ export class GaslessService {
     );
 
     logger.info('GaslessService initialized', {
-      chainId: config.chainId,
+      chainId: config.gasless.chainId,
       rpcUrl,
       gasPayerAddress: this.gasPayerWallet.address,
       factoryAddress
@@ -209,7 +209,7 @@ export class GaslessService {
       }
 
       // Get or create smart account
-      const smartAccountData = await this.createSmartAccount(ownerAddress);
+      const smartAccountData = await this.getOrCreateSmartAccount(ownerAddress);
       const smartAccountContract = new ethers.Contract(
         smartAccountData.address,
         SMART_ACCOUNT_ABI,
@@ -246,51 +246,20 @@ export class GaslessService {
           currentNonce
         );
 
-        // If signMessage was used, we need to verify against the prefixed hash
+        // Verify signature
+        let recoveredAddress: string;
+        
         if (signingMethod === 'signMessage') {
-          logger.info('Handling signMessage signature with Ethereum message prefix');
-          
-          // signMessage adds the Ethereum message prefix to the bytes
-          // The frontend calls: signMessage(ethers.getBytes(expectedHash))
-          // This creates a message like: "\x19Ethereum Signed Message:\n32" + bytes(expectedHash)
+          // signMessage adds the Ethereum message prefix: "\x19Ethereum Signed Message:\n" + message.length + message
           const prefixedHash = ethers.hashMessage(ethers.getBytes(expectedHash));
-          
-          logger.info('Debug signMessage verification:', {
-            expectedHash,
-            prefixedHash,
-            signature,
-            ownerAddress
-          });
-          
-          // Verify the signature against the prefixed hash
-          try {
-            const recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
-            logger.info('Signature recovery result:', {
-              recoveredAddress,
-              expectedAddress: ownerAddress,
-              match: recoveredAddress.toLowerCase() === ownerAddress.toLowerCase()
-            });
-            
-            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
-              throw new Error(`Signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
-            }
-            logger.info('signMessage signature verified successfully');
-          } catch (verifyError) {
-            logger.error('signMessage signature verification failed:', verifyError);
-            throw new Error('Invalid signature for signMessage method');
-          }
+          recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
         } else {
-          // For other signing methods, verify against the raw hash
-          try {
-            const recoveredAddress = ethers.recoverAddress(expectedHash, signature);
-            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
-              throw new Error(`Signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
-            }
-            logger.info(`${signingMethod} signature verified successfully`);
-          } catch (verifyError) {
-            logger.error(`${signingMethod} signature verification failed:`, verifyError);
-            throw new Error(`Invalid signature for ${signingMethod} method`);
-          }
+          // For eth_sign and personal_sign, use the raw hash
+          recoveredAddress = ethers.recoverAddress(expectedHash, signature);
+        }
+        
+        if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+          throw new Error(`Signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
         }
         
         const tx = await smartAccountContract.executeTransaction(
@@ -315,50 +284,20 @@ export class GaslessService {
           currentNonce
         );
 
-        // If signMessage was used, we need to verify against the prefixed hash
+        // Verify signature
+        let recoveredAddress: string;
+        
         if (signingMethod === 'signMessage') {
-          logger.info('Handling signMessage signature with Ethereum message prefix for batch transaction');
-          
-          // signMessage adds the Ethereum message prefix to the bytes
-          // The frontend calls: signMessage(ethers.getBytes(expectedHash))
-          // This creates a message like: "\x19Ethereum Signed Message:\n32" + bytes(expectedHash)
-          const hashBytes = ethers.getBytes(expectedHash);
-          const prefixedHash = ethers.hashMessage(hashBytes);
-          
-          // Debug logging for signMessage verification
-          logger.info('DEBUG signMessage verification:', {
-            expectedHash,
-            hashBytes: ethers.hexlify(hashBytes),
-            prefixedHash,
-            signature,
-            ownerAddress
-          });
-          
-          // Verify the signature against the prefixed hash
-          try {
-            const recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
-            logger.info('DEBUG signMessage recovered address:', recoveredAddress);
-            
-            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
-              throw new Error(`Batch signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
-            }
-            logger.info('signMessage batch signature verified successfully');
-          } catch (verifyError) {
-            logger.error('signMessage batch signature verification failed:', verifyError);
-            throw new Error('Invalid batch signature for signMessage method');
-          }
+          // signMessage adds the Ethereum message prefix: "\x19Ethereum Signed Message:\n" + message.length + message
+          const prefixedHash = ethers.hashMessage(ethers.getBytes(expectedHash));
+          recoveredAddress = ethers.recoverAddress(prefixedHash, signature);
         } else {
-          // For other signing methods, verify against the raw hash
-          try {
-            const recoveredAddress = ethers.recoverAddress(expectedHash, signature);
-            if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
-              throw new Error(`Batch signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
-            }
-            logger.info(`${signingMethod} batch signature verified successfully`);
-          } catch (verifyError) {
-            logger.error(`${signingMethod} batch signature verification failed:`, verifyError);
-            throw new Error(`Invalid batch signature for ${signingMethod} method`);
-          }
+          // For eth_sign and personal_sign, use the raw hash
+          recoveredAddress = ethers.recoverAddress(expectedHash, signature);
+        }
+        
+        if (recoveredAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+          throw new Error(`Batch signature verification failed: expected ${ownerAddress}, got ${recoveredAddress}`);
         }
         
         const tx = await smartAccountContract.executeBatchTransaction(
@@ -403,7 +342,7 @@ export class GaslessService {
   ): Promise<{ txHash: string; smartAccount: string; nonce: number }> {
     try {
       // Get or create smart account
-      const smartAccountData = await this.createSmartAccount(ownerAddress);
+      const smartAccountData = await this.getOrCreateSmartAccount(ownerAddress);
       const smartAccountContract = new ethers.Contract(
         smartAccountData.address,
         SMART_ACCOUNT_ABI,
@@ -441,7 +380,7 @@ export class GaslessService {
   ): Promise<{ txHash: string; smartAccount: string; nonce: number }> {
     try {
       // Get or create smart account
-      const smartAccountData = await this.createSmartAccount(ownerAddress);
+      const smartAccountData = await this.getOrCreateSmartAccount(ownerAddress);
       const smartAccountContract = new ethers.Contract(
         smartAccountData.address,
         SMART_ACCOUNT_ABI,
@@ -484,7 +423,7 @@ export class GaslessService {
   ): Promise<{ gasEstimate: string; gasPrice: string }> {
     try {
       // Get or create smart account
-      const smartAccountData = await this.createSmartAccount(ownerAddress);
+      const smartAccountData = await this.getOrCreateSmartAccount(ownerAddress);
       const smartAccountContract = new ethers.Contract(
         smartAccountData.address,
         SMART_ACCOUNT_ABI,
@@ -536,24 +475,22 @@ export class GaslessService {
    * Get RPC URL with fallbacks
    */
   private getRpcUrl(): string {
-    if (config.rpcUrl) {
-      return config.rpcUrl;
+    if (config.contracts.rpcUrl) {
+      return config.contracts.rpcUrl;
     }
-
-    // Fallback RPC URLs based on chain ID
-    switch (config.chainId) {
+    
+    // Fallback to chain-specific RPC URLs
+    switch (config.gasless.chainId) {
       case 11155111: // Sepolia
-        return 'https://rpc.sepolia.org';
-      case 97: // BSC Testnet
-        return 'https://bsc-testnet.publicnode.com';
+        return process.env.SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY';
       case 1: // Mainnet
-        return 'https://eth.llamarpc.com';
+        return process.env.MAINNET_RPC_URL || 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY';
       case 137: // Polygon
-        return 'https://polygon-rpc.com';
-      case 31337: // Localhost
-        return 'http://localhost:8545';
+        return process.env.POLYGON_RPC_URL || 'https://polygon-rpc.com';
+      case 80001: // Mumbai
+        return process.env.MUMBAI_RPC_URL || 'https://rpc-mumbai.maticvigil.com';
       default:
-        throw new Error(`No RPC URL configured for chain ID ${config.chainId}`);
+        throw new Error(`No RPC URL configured for chain ID ${config.gasless.chainId}`);
     }
   }
 
@@ -563,13 +500,13 @@ export class GaslessService {
   private getFactoryAddress(): string {
     // For now, use the Sepolia deployment
     // In production, you'd have different addresses for different networks
-    switch (config.chainId) {
+    switch (config.gasless.chainId) {
       case 11155111: // Sepolia
         return '0x752F888650A57cd7c7C2B6B658012d3c9239Cc03';
       case 97: // BSC Testnet - would need to deploy there
         throw new Error('Smart Account Factory not deployed on BSC Testnet yet');
       default:
-        throw new Error(`Smart Account Factory not available for chain ID ${config.chainId}`);
+        throw new Error(`Smart Account Factory not available for chain ID ${config.gasless.chainId}`);
     }
   }
 }

@@ -30,9 +30,6 @@ export interface EnvironmentConfig {
   web3Auth: Web3AuthConfig;
   contracts: ContractConfig;
   database: DatabaseConfig;
-  privateKey: string;
-  rpcUrl: string;
-  chainId: number;
   port: number;
   nodeEnv: string;
 }

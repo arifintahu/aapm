@@ -134,85 +134,28 @@ export class GaslessService {
         let signingMethod = 'unknown';
         
         try {
-          // First try eth_sign (raw signing without prefix) - this is what we want
-          console.log('Attempting eth_sign with hash:', txHashToSign);
+          // First try eth_sign (raw signing without prefix)
           signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
             await this.smartAccount.signer.getAddress(),
             txHashToSign
           ]);
           signingMethod = 'eth_sign';
-          console.log('Successfully signed with eth_sign');
         } catch (ethSignError) {
-          console.log('eth_sign failed:', ethSignError.message);
           try {
             // Fallback to personal_sign
-            console.log('Attempting personal_sign with hash:', txHashToSign);
             signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
               txHashToSign,
               await this.smartAccount.signer.getAddress()
             ]);
             signingMethod = 'personal_sign';
-            console.log('Successfully signed with personal_sign');
           } catch (personalSignError) {
-            console.log('personal_sign failed:', personalSignError.message);
             try {
-              // Try signTypedData for EIP-712 structured data (Web3Auth should support this)
-              console.log('Attempting signTypedData for EIP-712 structured data');
-              
-              // We need to reconstruct the EIP-712 domain and message from the hash
-              // Since we have the final hash, we need to work backwards to create the typed data
-              // This is complex, so let's try a simpler approach first
-              
-              // Try eth_signTypedData_v4
-              const typedData = {
-                types: {
-                  EIP712Domain: [
-                    { name: 'name', type: 'string' },
-                    { name: 'version', type: 'string' },
-                    { name: 'chainId', type: 'uint256' },
-                    { name: 'verifyingContract', type: 'address' }
-                  ],
-                  BatchTransaction: [
-                    { name: 'to', type: 'address[]' },
-                    { name: 'values', type: 'uint256[]' },
-                    { name: 'data', type: 'bytes32[]' },
-                    { name: 'nonce', type: 'uint256' }
-                  ]
-                },
-                primaryType: 'BatchTransaction',
-                domain: {
-                  name: 'SmartAccount',
-                  version: '1',
-                  chainId: this.getNumericChainId(),
-                  verifyingContract: this.smartAccount.address
-                },
-                message: {
-                  to: [to],
-                  values: [value],
-                  data: [ethers.keccak256(ethers.getBytes(data))],
-                  nonce: parseInt(nonce)
-                }
-              };
-              
-              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_signTypedData_v4", [
-                await this.smartAccount.signer.getAddress(),
-                JSON.stringify(typedData)
-              ]);
-              signingMethod = 'signTypedData';
-              console.log('Successfully signed with signTypedData');
-            } catch (signTypedDataError) {
-              console.log('signTypedData failed:', signTypedDataError.message);
-              try {
-                // Last resort: signMessage (adds prefix, but we'll send the signing method to backend)
-                console.log('Attempting signMessage with hash bytes');
-                const hashBytes = ethers.getBytes(txHashToSign);
-                signature = await this.smartAccount.signer.signMessage(hashBytes);
-                signingMethod = 'signMessage';
-                console.log('Successfully signed with signMessage');
-              } catch (signMessageError) {
-                console.log('signMessage failed:', signMessageError.message);
-                throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
-              }
+              // Last resort: signMessage (adds prefix)
+              const hashBytes = ethers.getBytes(txHashToSign);
+              signature = await this.smartAccount.signer.signMessage(hashBytes);
+              signingMethod = 'signMessage';
+            } catch (signMessageError) {
+              throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
             }
           }
         }
@@ -222,10 +165,6 @@ export class GaslessService {
           signature = '0x' + signature;
         }
         
-        // Check signature length and format
-        console.log('Raw signature:', signature);
-        console.log('Signature length:', signature.length);
-        
         // Ensure signature is 65 bytes (130 hex chars + 0x prefix = 132 total)
         if (signature.length === 130) {
           // Missing 0x prefix, add it
@@ -234,7 +173,6 @@ export class GaslessService {
         
         if (signature.length === 130) {
           // 64 bytes - missing recovery ID, need to add it
-          console.log('Signature missing recovery ID, attempting to recover it...');
           
           // Try to recover the correct v value
           // For signMessage, we need to use the prefixed hash for recovery
@@ -254,7 +192,6 @@ export class GaslessService {
               const signerAddress = await this.smartAccount.signer.getAddress();
               if (recoveredAddress.toLowerCase() === signerAddress.toLowerCase()) {
                 signature = testSig;
-                console.log('Successfully recovered signature with v =', recovery + 27);
                 break;
               }
             } catch (e) {
@@ -262,10 +199,6 @@ export class GaslessService {
             }
           }
         }
-        
-        console.log('Final signature:', signature);
-        console.log('Signing method used:', signingMethod);
-        console.log('Final signature length:', signature.length);
         
         // Step 3: Send the signed transaction to backend
         const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {
@@ -334,81 +267,28 @@ export class GaslessService {
         let signingMethod = 'unknown';
         
         try {
-          // First try eth_signTypedData_v4 for EIP-712 structured data
-          console.log('Attempting eth_signTypedData_v4 with structured data');
-          const typedData = {
-            types: {
-              EIP712Domain: [
-                { name: "name", type: "string" },
-                { name: "version", type: "string" },
-                { name: "chainId", type: "uint256" },
-                { name: "verifyingContract", type: "address" }
-              ],
-              BatchTransaction: [
-                { name: "to", type: "address[]" },
-                { name: "data", type: "bytes[]" },
-                { name: "value", type: "uint256[]" },
-                { name: "nonce", type: "uint256" }
-              ]
-            },
-            primaryType: "BatchTransaction",
-            domain: {
-              name: "SmartAccount",
-              version: "1",
-              chainId: this.getNumericChainId(),
-              verifyingContract: this.smartAccount.address
-            },
-            message: {
-              to: transactions.map(tx => tx.to),
-              data: transactions.map(tx => tx.data),
-              value: transactions.map(tx => tx.value || '0'),
-              nonce: hashResult.data.nonce || 0
-            }
-          };
-          
-          signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_signTypedData_v4", [
+          // First try eth_sign (raw signing without prefix)
+          signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
             await this.smartAccount.signer.getAddress(),
-            JSON.stringify(typedData)
+            txHashToSign
           ]);
-          signingMethod = 'eth_signTypedData_v4';
-          console.log('Successfully signed with eth_signTypedData_v4');
-        } catch (typedDataError) {
-          console.log('eth_signTypedData_v4 failed:', typedDataError.message);
+          signingMethod = 'eth_sign';
+        } catch (ethSignError) {
           try {
-            // Fallback to eth_sign (raw signing without prefix)
-            console.log('Attempting eth_sign with hash:', txHashToSign);
-            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("eth_sign", [
-              await this.smartAccount.signer.getAddress(),
-              txHashToSign
+            // Fallback to personal_sign
+            signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
+              txHashToSign,
+              await this.smartAccount.signer.getAddress()
             ]);
-            signingMethod = 'eth_sign';
-            console.log('Successfully signed with eth_sign');
-          } catch (ethSignError) {
-            console.log('eth_sign failed:', ethSignError.message);
+            signingMethod = 'personal_sign';
+          } catch (personalSignError) {
             try {
-              // Fallback to personal_sign
-              console.log('Attempting personal_sign with hash:', txHashToSign);
-              signature = await (this.smartAccount.signer.provider as ethers.JsonRpcProvider).send("personal_sign", [
-                txHashToSign,
-                await this.smartAccount.signer.getAddress()
-              ]);
-              signingMethod = 'personal_sign';
-              console.log('Successfully signed with personal_sign');
-            } catch (personalSignError) {
-              console.log('personal_sign failed:', personalSignError.message);
-              try {
-                // Last resort: signMessage (adds prefix)
-                console.log('Attempting signMessage with hash bytes');
-                const hashBytes = ethers.getBytes(txHashToSign);
-                console.log('Hash bytes to sign:', ethers.hexlify(hashBytes));
-                console.log('Original hash:', txHashToSign);
-                signature = await this.smartAccount.signer.signMessage(hashBytes);
-                signingMethod = 'signMessage';
-                console.log('Successfully signed with signMessage');
-              } catch (signMessageError) {
-                console.log('signMessage failed:', signMessageError.message);
-                throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
-              }
+              // Last resort: signMessage (adds prefix)
+              const hashBytes = ethers.getBytes(txHashToSign);
+              signature = await this.smartAccount.signer.signMessage(hashBytes);
+              signingMethod = 'signMessage';
+            } catch (signMessageError) {
+              throw new Error(`All signing methods failed. Last error: ${signMessageError.message}`);
             }
           }
         }
@@ -419,8 +299,6 @@ export class GaslessService {
         }
         
         // Check signature length and format
-        console.log('Raw signature:', signature);
-        console.log('Signature length:', signature.length);
         
         // Ensure signature is 65 bytes (130 hex chars + 0x prefix = 132 total)
         if (signature.length === 130) {
@@ -430,7 +308,6 @@ export class GaslessService {
         
         if (signature.length === 130) {
           // 64 bytes - missing recovery ID, need to add it
-          console.log('Signature missing recovery ID, attempting to recover it...');
           
           // Try to recover the correct v value
           // For signMessage, we need to use the prefixed hash for recovery
@@ -450,7 +327,6 @@ export class GaslessService {
               const signerAddress = await this.smartAccount.signer.getAddress();
               if (recoveredAddress.toLowerCase() === signerAddress.toLowerCase()) {
                 signature = testSig;
-                console.log('Successfully recovered signature with v =', recovery + 27);
                 break;
               }
             } catch (e) {
@@ -458,10 +334,6 @@ export class GaslessService {
             }
           }
         }
-        
-        console.log('Final signature:', signature);
-        console.log('Signing method used:', signingMethod);
-        console.log('Final signature length:', signature.length);
         
         // Step 3: Send the signed transaction to backend
         const response = await fetch(`${this.backendUrl}/api/betting/send-bundle`, {

@@ -39,8 +39,7 @@ const authenticateAndSetupSmartAccount = async (
   accounts: string[],
   userInfo: any
 ): Promise<{ smartAccount: SmartAccount; authResult: any }> => {
-  console.log('Authenticating with backend - accounts:', accounts);
-  console.log('Authenticating with backend - userInfo:', userInfo);
+
   
   // Authenticate with backend
   const authResult = await backendAuthService.authenticateWithWeb3Auth(
@@ -160,9 +159,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   initialize: async () => {
     // Prevent multiple simultaneous initializations
     if (isInitializing) {
-      console.log('Initialization already in progress, waiting for completion...');
       if (initializationPromise) {
-        await initializationPromise;
+        return initializationPromise;
       }
       return;
     }
@@ -194,7 +192,7 @@ export const useAppStore = create<AppState>((set, get) => ({
               // Update state and load initial data
               await updateStateAndLoadData(set, get, provider, smartAccount, accounts, userInfo);
             } catch (accountError) {
-              console.log('Failed to get accounts or authenticate:', accountError);
+              console.error('Failed to get accounts or authenticate:', accountError);
               // User needs to login manually
             }
           }

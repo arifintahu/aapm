@@ -29,9 +29,6 @@ export const config: EnvironmentConfig = {
     ssl: process.env.DB_SSL === 'true',
     maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
   },
-  privateKey: process.env.PRIVATE_KEY || '',
-  rpcUrl: process.env.RPC_URL || '',
-  chainId: parseInt(process.env.CHAIN_ID || '11155111'),
   port: parseInt(process.env.PORT || '3001'),
   nodeEnv: process.env.NODE_ENV || 'development',
 };

@@ -285,7 +285,7 @@ router.post('/smart-account', authMiddleware, async (req: Request, res: Response
 
     if (user.smartAccountAddress) {
       // Smart account already exists, return existing data
-      const smartAccountData = await gaslessService.createSmartAccount(user.walletAddress);
+      const smartAccountData = await gaslessService.getOrCreateSmartAccount(user.walletAddress);
       
       const response: ApiResponse<typeof smartAccountData> = {
         success: true,
@@ -298,7 +298,7 @@ router.post('/smart-account', authMiddleware, async (req: Request, res: Response
     }
 
     // Create new smart account
-    const smartAccountData = await gaslessService.createSmartAccount(user.walletAddress);
+    const smartAccountData = await gaslessService.getOrCreateSmartAccount(user.walletAddress);
     
     // Update user with smart account address
     const updatedUser = await storage.updateUser(user.id, {
