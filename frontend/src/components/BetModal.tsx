@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { Outcome } from "@/lib/contracts";
-import { X, TrendingUp, TrendingDown, Loader2, AlertCircle } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Loader2, AlertCircle, Shield } from "lucide-react";
 import { ethers } from "ethers";
 
 export default function BetModal() {
@@ -166,8 +166,9 @@ export default function BetModal() {
               <label className="text-sm font-medium text-gray-300">
                 Bet Amount
               </label>
-              <div className="text-sm text-gray-400">
-                Balance: {balance.toFixed(2)} USDC
+              <div className="flex items-center space-x-1 text-sm text-gray-400">
+                <Shield className="h-3 w-3 text-gray-400" />
+                <span>Balance: {balance.toFixed(2)} USDC</span>
               </div>
             </div>
             

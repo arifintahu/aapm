@@ -1,6 +1,6 @@
 import React from "react";
 import { useAppStore } from "@/lib/store";
-import { X, Copy, ExternalLink, Droplets, Loader2, CheckCircle } from "lucide-react";
+import { X, Copy, ExternalLink, Droplets, Loader2, CheckCircle, Wallet, Shield } from "lucide-react";
 import { chainConfig } from "@/lib/web3auth";
 
 export default function WalletModal() {
@@ -103,9 +103,12 @@ export default function WalletModal() {
 
           {/* Address */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">
-              Wallet Address
-            </label>
+            <div className="flex items-center space-x-2">
+              <Wallet className="h-4 w-4 text-gray-400" />
+              <label className="text-sm font-medium text-gray-300">
+                Wallet Address
+              </label>
+            </div>
             <div className="flex items-center space-x-2">
               <div className="flex-1 bg-white/10 rounded-lg px-3 py-2 font-mono text-sm text-white">
                 {user.address.slice(0, 6)}...{user.address.slice(-4)}
@@ -135,6 +138,7 @@ export default function WalletModal() {
           {smartAccount && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
+                <Shield className="h-4 w-4 text-green-400" />
                 <label className="text-sm font-medium text-gray-300">
                   Smart Account Address
                 </label>

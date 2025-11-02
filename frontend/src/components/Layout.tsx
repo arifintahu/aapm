@@ -1,6 +1,6 @@
 import React from "react";
 import { useAppStore } from "@/lib/store";
-import { Wallet, LogOut, User, TrendingUp, RefreshCw } from "lucide-react";
+import { Wallet, LogOut, User, TrendingUp, RefreshCw, Shield } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -62,11 +62,19 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {/* Balance */}
-                <div className="bg-white/10 rounded-lg px-3 py-2 border border-white/20">
-                  <span className="text-sm text-gray-300">Balance:</span>
-                  <span className="ml-2 font-semibold text-white">
-                    {parseFloat(usdcBalance).toFixed(2)} USDC
-                  </span>
+                <div className="bg-white/10 rounded-lg px-3 py-2 border border-white/20 group relative">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-4 w-4 text-gray-300" />
+                    <span className="text-sm text-gray-300">Balance:</span>
+                    <span className="font-semibold text-white">
+                      {parseFloat(usdcBalance).toFixed(2)} USDC
+                    </span>
+                  </div>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg border border-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none">
+                    Smart Account Balance
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
+                  </div>
                 </div>
 
                 {/* Wallet Button */}
