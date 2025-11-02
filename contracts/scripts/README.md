@@ -42,7 +42,7 @@ npm run query-events:bscTestnet
 ## Environment Variables
 
 ### create-event
-- `QUESTION` - Prediction question (default: "Will Bitcoin reach $100,000 by the end of 2024?")
+- `QUESTION` - Prediction question (default: "Will Bitcoin reach $100,000 by the end of 2025?")
 - `DURATION_DAYS` - Duration in days (default: 30)
 
 ### place-bet

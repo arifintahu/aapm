@@ -34,7 +34,7 @@ async function main() {
   console.log("\nCreating sample event...");
   const eventDuration = 7 * 24 * 60 * 60; // 7 days
   const createEventTx = await predictionMarket.createEvent(
-    "Will Bitcoin reach $100,000 by the end of 2024?",
+    "Will Bitcoin reach $100,000 by the end of 2025?",
     eventDuration
   );
   await createEventTx.wait();

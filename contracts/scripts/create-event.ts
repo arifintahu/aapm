@@ -28,7 +28,7 @@ async function main() {
   const predictionMarket = PredictionMarket.attach(predictionMarketAddress);
   
   // Event parameters - you can modify these
-  const question = process.env.QUESTION || "Will Bitcoin reach $100,000 by the end of 2024?";
+  const question = process.env.QUESTION || "Will Bitcoin reach $100,000 by the end of 2025?";
   const durationInDays = parseInt(process.env.DURATION_DAYS || "30"); // Default 30 days
   const durationInSeconds = durationInDays * 24 * 60 * 60;
   
