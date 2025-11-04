@@ -8,7 +8,6 @@ export interface GaslessConfig {
 
 export interface ContractConfig {
   predictionMarketAddress: string;
-  privateKey: string;
   rpcUrl: string;
 }
 

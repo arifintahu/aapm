@@ -8,13 +8,11 @@ dotenv.config({ path: path.join(process.cwd(), '.env') });
 export const config: EnvironmentConfig = {
   gasless: {
     factoryAddress: process.env.GASLESS_FACTORY_ADDRESS || '',
-    gasPayerPrivateKey: process.env.GASLESS_GAS_PAYER_PRIVATE_KEY || process.env.PRIVATE_KEY || '',
-    chainId: parseInt(process.env.GASLESS_CHAIN_ID || process.env.CHAIN_ID || '11155111'),
+    gasPayerPrivateKey: process.env.GASLESS_GAS_PAYER_PRIVATE_KEY || '',
+    chainId: parseInt(process.env.GASLESS_CHAIN_ID || '97'),
   },
-
   contracts: {
     predictionMarketAddress: process.env.PREDICTION_MARKET_ADDRESS || '',
-    privateKey: process.env.PRIVATE_KEY || '',
     rpcUrl: process.env.RPC_URL || '',
   },
   database: {
