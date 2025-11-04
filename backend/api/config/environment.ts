@@ -7,25 +7,25 @@ dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 export const config: EnvironmentConfig = {
   gasless: {
-    factoryAddress: process.env.GASLESS_FACTORY_ADDRESS ?? '',
-    gasPayerPrivateKey: process.env.GASLESS_GAS_PAYER_PRIVATE_KEY ?? '',
-    chainId: parseInt(process.env.GASLESS_CHAIN_ID ?? '97'),
+    factoryAddress: process.env.GASLESS_FACTORY_ADDRESS!,
+    gasPayerPrivateKey: process.env.GASLESS_GAS_PAYER_PRIVATE_KEY!,
+    chainId: parseInt(process.env.GASLESS_CHAIN_ID!, 10),
   },
   contracts: {
-    predictionMarketAddress: process.env.PREDICTION_MARKET_ADDRESS ?? '',
-    rpcUrl: process.env.RPC_URL ?? '',
+    predictionMarketAddress: process.env.PREDICTION_MARKET_ADDRESS!,
+    rpcUrl: process.env.RPC_URL!,
   },
   database: {
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432'),
-    database: process.env.DB_NAME ?? 'aapm_db',
-    username: process.env.DB_USER ?? 'aapm_user',
-    password: process.env.DB_PASSWORD ?? 'aapm_password',
+    host: process.env.DB_HOST!,
+    port: parseInt(process.env.DB_PORT!, 10),
+    database: process.env.DB_NAME!,
+    username: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
     ssl: process.env.DB_SSL === 'true',
-    maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS ?? '20'),
+    maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS!, 10),
   },
-  port: parseInt(process.env.PORT ?? '3001'),
-  nodeEnv: process.env.NODE_ENV ?? 'development',
+  port: parseInt(process.env.PORT!, 10),
+  nodeEnv: process.env.NODE_ENV!,
 };
 
 // Validate required environment variables
