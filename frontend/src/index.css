@@ -12,13 +12,18 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Global UI scale to nudge overall size down */
-  --ui-scale: 0.95;
+  --ui-scale: 0.8;
 }
 
 /* Fluid typography baseline so rem-based sizes scale with viewport */
 @layer base {
   html {
-    font-size: calc(var(--ui-scale) * clamp(14px, 1vw + 12px, 18px));
+    /* Apply scale to all clamp bounds so mobile minimum also shrinks */
+    font-size: clamp(
+      calc(14px * var(--ui-scale)),
+      calc((1vw + 12px) * var(--ui-scale)),
+      calc(18px * var(--ui-scale))
+    );
   }
 }
 
@@ -39,9 +44,10 @@ img {
 }
 
 /* Vary scaling by breakpoint: keep mobile readable, reduce tablet/desktop more */
+/* Keep consistent scale across breakpoints */
 @media (max-width: 767px) {
-  :root { --ui-scale: 0.95; }
+  :root { --ui-scale: 0.8; }
 }
 @media (min-width: 768px) {
-  :root { --ui-scale: 0.90; }
+  :root { --ui-scale: 0.8; }
 }
