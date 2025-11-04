@@ -39,7 +39,7 @@ export default function Home() {
   // Show loading spinner during initialization
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-400 mx-auto mb-4" />
           <p className="text-white text-lg">Initializing...</p>
@@ -51,7 +51,7 @@ export default function Home() {
   // Show login screen if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="min-h-[100dvh] bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <LoginButton />
       </div>
     );
@@ -62,10 +62,10 @@ export default function Home() {
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
             Prediction Market
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
             Place bets on future events with gasless transactions using USDC.
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function Home() {
               )}
               <button
                 onClick={() => setShowCreateEventModal(true)}
-                className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors min-h-[48px]"
               >
                 <Plus className="h-4 w-4" />
                 <span>Create Event</span>
@@ -100,7 +100,7 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 events-grid">
               {events.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}

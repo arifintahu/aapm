@@ -69,7 +69,7 @@ export default function WalletModal() {
           <h2 className="text-xl font-semibold text-white">Your Wallet</h2>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="min-w-[48px] min-h-[48px] p-3 hover:bg-white/10 rounded-lg transition-colors"
           >
             <X className="h-5 w-5 text-gray-400" />
           </button>
@@ -115,7 +115,7 @@ export default function WalletModal() {
               </div>
               <button
                 onClick={handleCopyAddress}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="min-w-[48px] min-h-[48px] p-3 hover:bg-white/10 rounded-lg transition-colors"
                 title="Copy address"
               >
                 {copied ? (
@@ -126,7 +126,7 @@ export default function WalletModal() {
               </button>
               <button
                 onClick={handleViewOnExplorer}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="min-w-[48px] min-h-[48px] p-3 hover:bg-white/10 rounded-lg transition-colors"
                 title="View on Etherscan"
               >
                 <ExternalLink className="h-4 w-4 text-gray-400" />
@@ -152,7 +152,7 @@ export default function WalletModal() {
                 </div>
                 <button
                   onClick={handleCopySmartAccount}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="min-w-[48px] min-h-[48px] p-3 hover:bg-white/10 rounded-lg transition-colors"
                   title="Copy smart account address"
                 >
                   {smartAccountCopied ? (
@@ -163,7 +163,7 @@ export default function WalletModal() {
                 </button>
                 <button
                   onClick={() => window.open(`${chainConfig.blockExplorerUrl}/address/${smartAccount.address}`, '_blank')}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="min-w-[48px] min-h-[48px] p-3 hover:bg-white/10 rounded-lg transition-colors"
                   title="View smart account on Etherscan"
                 >
                   <ExternalLink className="h-4 w-4 text-gray-400" />
@@ -189,7 +189,7 @@ export default function WalletModal() {
             <button
               onClick={handleClaimFaucet}
               disabled={claiming || isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2 min-h-[48px]"
             >
               {claiming ? (
                 <>

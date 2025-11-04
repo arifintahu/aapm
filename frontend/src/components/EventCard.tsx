@@ -168,19 +168,19 @@ export default function EventCard({ event }: EventCardProps) {
         {canBet ? (
           <button
             onClick={handleBetClick}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105"
+            className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 min-h-[48px]"
           >
             Place Bet
           </button>
         ) : event.status === EventStatus.Active ? (
-          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center">
+          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center min-h-[48px]">
             <div className="flex items-center justify-center space-x-1">
               <Clock className="h-4 w-4" />
               <span>Betting Closed</span>
             </div>
           </div>
         ) : (
-          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center">
+          <div className="flex-1 bg-gray-600 text-gray-300 font-semibold py-3 px-4 rounded-lg text-center min-h-[48px]">
             Event Ended
           </div>
         )}
@@ -191,7 +191,7 @@ export default function EventCard({ event }: EventCardProps) {
               // This would trigger claim winnings
               console.log("Claim winnings for event", event.id);
             }}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors min-h-[48px]"
           >
             Claim
           </button>

@@ -15,16 +15,16 @@ export default function LoginButton() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] px-4">
       {/* Hero Section */}
       <div className="text-center space-y-6 mb-12">
         <div className="flex items-center justify-center space-x-3 mb-6">
           <TrendingUp className="h-12 w-12 text-purple-400" />
-          <h1 className="text-5xl md:text-6xl font-bold text-white">
+          <h1 className="text-4xl md:text-5xl font-bold text-white">
             Prediction Market
           </h1>
         </div>
-        <p className="text-xl md:text-2xl text-gray-300 max-w-3xl leading-relaxed">
+        <p className="text-base md:text-lg text-gray-300 max-w-3xl leading-relaxed">
           Experience the future of prediction betting with gasless transactions and social login. 
           No seed phrases, no gas fees - just pure prediction fun!
         </p>

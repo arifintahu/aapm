@@ -11,4 +11,37 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Global UI scale to nudge overall size down */
+  --ui-scale: 0.95;
+}
+
+/* Fluid typography baseline so rem-based sizes scale with viewport */
+@layer base {
+  html {
+    font-size: calc(var(--ui-scale) * clamp(14px, 1vw + 12px, 18px));
+  }
+}
+
+/* Responsive images default: scale within containers without distortion */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Orientation-specific enhancement: on small landscape, show 2 columns in events grid */
+.events-grid {
+  display: grid;
+}
+@media (orientation: landscape) and (max-width: 767px) {
+  .events-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Vary scaling by breakpoint: keep mobile readable, reduce tablet/desktop more */
+@media (max-width: 767px) {
+  :root { --ui-scale: 0.95; }
+}
+@media (min-width: 768px) {
+  :root { --ui-scale: 0.90; }
 }

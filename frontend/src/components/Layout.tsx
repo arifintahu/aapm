@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAppStore } from "@/lib/store";
-import { Wallet, LogOut, User, TrendingUp, RefreshCw, Shield } from "lucide-react";
+import { Wallet, LogOut, User, TrendingUp, RefreshCw, Shield, Menu, X } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,6 +17,8 @@ export default function Layout({ children }: LayoutProps) {
     loadBalance,
     loadEvents
   } = useAppStore();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -35,7 +37,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+    <div className="min-h-[100dvh] bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       {/* Header */}
       <header className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,15 +52,16 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* User Info & Actions */}
             {isAuthenticated && user ? (
-              <div className="flex items-center space-x-4">
+              <div className="hidden md:flex items-center space-x-4">
                 {/* Refresh Button */}
                 <button
                   onClick={handleRefresh}
                   disabled={isLoading}
-                  className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
+                  className="min-w-[48px] min-h-[48px] p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50"
                   title="Refresh data"
+                  aria-label="Refresh data"
                 >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
 
                 {/* Balance */}
@@ -80,9 +83,10 @@ export default function Layout({ children }: LayoutProps) {
                 {/* Wallet Button */}
                 <button
                   onClick={() => setShowWalletModal(true)}
-                  className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors min-h-[48px]"
+                  aria-label="Open wallet"
                 >
-                  <Wallet className="h-4 w-4" />
+                  <Wallet className="h-5 w-5" />
                   <span className="hidden sm:inline">Wallet</span>
                 </button>
 
@@ -105,10 +109,11 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="p-2 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    className="min-w-[48px] min-h-[48px] p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                     title="Logout"
+                    aria-label="Logout"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-5 w-5" />
                   </button>
                 </div>
               </div>
@@ -118,7 +123,67 @@ export default function Layout({ children }: LayoutProps) {
                 <span>Not connected</span>
               </div>
             )}
+
+            {/* Mobile menu toggle */}
+            {isAuthenticated && user && (
+              <div className="md:hidden">
+                <button
+                  onClick={() => setMobileMenuOpen((v) => !v)}
+                  className="min-w-[48px] min-h-[48px] p-3 text-gray-300 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                >
+                  {mobileMenuOpen ? (
+                    <X className="h-5 w-5" />
+                  ) : (
+                    <Menu className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
+          {/* Mobile dropdown menu */}
+          {mobileMenuOpen && isAuthenticated && user && (
+            <div className="md:hidden bg-black/70 backdrop-blur-md border border-white/10 rounded-lg mt-2 p-3 text-white">
+              <div className="space-y-2">
+                <button
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-3 disabled:opacity-50"
+                  aria-label="Refresh data"
+                >
+                  <span className="text-sm">Refresh</span>
+                  <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+                <div className="w-full bg-white/5 rounded-lg px-3 py-3 border border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-5 w-5 text-gray-300" />
+                      <span className="text-sm text-gray-300">Balance</span>
+                    </div>
+                    <span className="font-semibold text-white">
+                      {parseFloat(usdcBalance).toFixed(2)} USDC
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowWalletModal(true); setMobileMenuOpen(false); }}
+                  className="w-full flex items-center justify-between bg-purple-600 hover:bg-purple-700 rounded-lg px-3 py-3"
+                  aria-label="Open wallet"
+                >
+                  <span className="text-sm">Wallet</span>
+                  <Wallet className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-3"
+                  aria-label="Logout"
+                >
+                  <span className="text-sm">Logout</span>
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
