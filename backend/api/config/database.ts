@@ -33,13 +33,19 @@ class DatabaseManager {
 
   async initialize(): Promise<void> {
     try {
+      // Map DB_SSL=true to TLS with certificate verification disabled (sslmode=require equivalent)
+      // DB_SSL=false will disable TLS entirely (sslmode=disable).
+      const sslSetting = this.config.ssl
+        ? { rejectUnauthorized: false }
+        : false;
+
       const poolConfig: PoolConfig = {
         host: this.config.host,
         port: this.config.port,
         database: this.config.database,
         user: this.config.user,
         password: this.config.password,
-        ssl: this.config.ssl,
+        ssl: sslSetting,
         max: this.config.max,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
         connectionTimeoutMillis: this.config.connectionTimeoutMillis,
