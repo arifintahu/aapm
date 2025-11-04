@@ -172,52 +172,37 @@ export default function WalletModal() {
               <div className="text-xs text-gray-400 bg-blue-500/10 rounded-lg p-2 border border-blue-500/20">
                 💡 This is your gasless smart account that enables fee-free transactions
               </div>
+              <div className="text-sm text-gray-300 mt-2">
+                USDC Balance: <span className="font-bold text-white">{balance.toFixed(2)}</span>
+              </div>
             </div>
           )}
 
-          {/* Balance */}
-          <div className="space-y-4">
-            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl p-4 border border-purple-500/30">
-              <div className="text-center space-y-2">
-                <div className="text-sm text-gray-300">USDC Balance</div>
-                <div className="text-3xl font-bold text-white">
-                  {balance.toFixed(2)}
-                </div>
-                <div className="text-sm text-gray-400">
-                  {chainConfig.displayName}
-                </div>
+          {/* Faucet */}
+          <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Droplets className="h-5 w-5 text-blue-400" />
+                <span className="font-medium text-blue-300">Test Faucet</span>
               </div>
             </div>
-
-            {/* Faucet */}
-            <div className="bg-blue-500/20 rounded-lg p-4 border border-blue-500/30">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Droplets className="h-5 w-5 text-blue-400" />
-                  <span className="font-medium text-blue-300">Test Faucet</span>
-                </div>
-              </div>
-              <p className="text-sm text-blue-200 mb-3">
-                Get 1000 USDC for testing. You can claim once every 24 hours.
-              </p>
-              <button
-                onClick={handleClaimFaucet}
-                disabled={claiming || isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
-              >
-                {claiming ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Claiming...</span>
-                  </>
-                ) : (
-                  <>
-                    <Droplets className="h-4 w-4" />
-                    <span>Claim 1000 USDC</span>
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={handleClaimFaucet}
+              disabled={claiming || isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            >
+              {claiming ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Claiming...</span>
+                </>
+              ) : (
+                <>
+                  <Droplets className="h-4 w-4" />
+                  <span>Claim 1000 USDC</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Network Info */}
