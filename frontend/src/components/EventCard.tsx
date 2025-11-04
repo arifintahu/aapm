@@ -21,10 +21,10 @@ export default function EventCard({ event }: EventCardProps) {
   const noPercentage = totalPool > 0 ? (noAmount / totalPool) * 100 : 50;
 
   const getStatusColor = (status: EventStatus) => {
-    switch (status) {
-      case EventStatus.Active:
+    switch (status.toString()) {
+      case EventStatus.Active.toString():
         return "bg-green-500";
-      case EventStatus.Resolved:
+      case EventStatus.Resolved.toString():
         return "bg-blue-500";
 
       default:

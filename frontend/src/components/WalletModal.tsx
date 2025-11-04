@@ -65,7 +65,7 @@ export default function WalletModal() {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-gray-900 rounded-2xl border border-white/20 w-full max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
           <h2 className="text-xl font-semibold text-white">Your Wallet</h2>
           <button
             onClick={handleClose}
@@ -205,8 +205,8 @@ export default function WalletModal() {
             </button>
           </div>
 
-          {/* Network Info */}
-          <div className="bg-white/5 rounded-lg p-4 space-y-2">
+          {/* Network Info (hidden on mobile) */}
+          <div className="hidden md:block bg-white/5 rounded-lg p-4 space-y-2">
             <h4 className="font-medium text-white">Network Information</h4>
             <div className="space-y-1 text-sm text-gray-300">
               <div className="flex justify-between">
@@ -220,8 +220,8 @@ export default function WalletModal() {
             </div>
           </div>
 
-          {/* Features */}
-          <div className="text-center space-y-2">
+          {/* Features (hidden on mobile) */}
+          <div className="hidden md:block text-center space-y-2">
             <div className="text-sm text-gray-400">Powered by</div>
             <div className="flex justify-center space-x-4 text-xs text-gray-500">
               <span>🔐 Web3Auth</span>
