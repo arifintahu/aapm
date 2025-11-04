@@ -25,9 +25,14 @@ async function initializeApp() {
   }
 }
 
+// CORS configuration with environment variable support
+const defaultOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+const customOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()) : [];
+const allowedOrigins = [...defaultOrigins, ...customOrigins];
+
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

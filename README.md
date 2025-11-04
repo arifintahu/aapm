@@ -134,6 +134,7 @@ DB_CONNECTION_TIMEOUT=2000
 PORT=4000
 NODE_ENV=development
 JWT_SECRET=your_jwt_secret_key
+CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
 
 # Gasless Transaction Configuration
 GASLESS_FACTORY_ADDRESS=your_factory_address
