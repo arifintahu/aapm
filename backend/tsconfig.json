@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "sourceMap": true,
-    "outDir": "./api",
+    "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "noImplicitAny": true,
@@ -30,8 +30,7 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "api"
+    "dist"
   ],
   "ts-node": {
     "esm": true,
