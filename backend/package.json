@@ -2,12 +2,12 @@
   "name": "aapm-backend",
   "version": "1.0.0",
   "description": "Backend API server for the Gasless Prediction Market Betting Platform",
-  "main": "api/index.ts",
+  "main": "src/app.ts",
   "scripts": {
     "dev": "nodemon",
-    "build": "echo 'No build required'",
-    "start": "node dist/api/index.js",
-    "check": "tsc --noEmit"
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "check": "tsc"
   },
   "dependencies": {
     "@types/pg": "^8.15.6",
@@ -29,7 +29,6 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.15.30",
     "@types/uuid": "^10.0.0",
-    "@vercel/node": "^5.3.6",
     "nodemon": "^3.1.10",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3"
