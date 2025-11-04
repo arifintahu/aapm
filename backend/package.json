@@ -5,10 +5,10 @@
   "main": "src/app.ts",
   "scripts": {
     "dev": "nodemon",
-    "build": "rimraf dist && tsc",
+    "build": "rimraf api && tsc",
     "ts.check": "tsc --project tsconfig.json",
-    "add-build": "git add dist",
-    "start": "node dist/app.js",
+    "add-build": "git add api",
+    "start": "node api/app.js",
     "check": "tsc"
   },
   "dependencies": {
