@@ -4,5 +4,21 @@
       "src": "api/**/*.ts",
       "use": "@vercel/node"
     }
-  ]
+  ],
+  "env": {
+    "GASLESS_FACTORY_ADDRESS": "0x0000000000000000000000000000000000000000",
+    "GASLESS_GAS_PAYER_PRIVATE_KEY": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "GASLESS_CHAIN_ID": "97",
+    "PREDICTION_MARKET_ADDRESS": "0x0000000000000000000000000000000000000000",
+    "RPC_URL": "https://bsc-testnet-rpc.publicnode.com",
+    "DB_HOST": "localhost",
+    "DB_PORT": "5432",
+    "DB_NAME": "aapm_db",
+    "DB_USER": "aapm_user",
+    "DB_PASSWORD": "aapm_password",
+    "DB_SSL": "false",
+    "DB_MAX_CONNECTIONS": "20",
+    "PORT": "3001",
+    "NODE_ENV": "development"
+  }
 }
