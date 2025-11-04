@@ -4,10 +4,7 @@ export interface GaslessConfig {
   chainId: number;
 }
 
-export interface Web3AuthConfig {
-  clientId: string;
-  network: string;
-}
+
 
 export interface ContractConfig {
   predictionMarketAddress: string;
@@ -27,7 +24,6 @@ export interface DatabaseConfig {
 
 export interface EnvironmentConfig {
   gasless: GaslessConfig;
-  web3Auth: Web3AuthConfig;
   contracts: ContractConfig;
   database: DatabaseConfig;
   port: number;

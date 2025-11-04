@@ -11,10 +11,7 @@ export const config: EnvironmentConfig = {
     gasPayerPrivateKey: process.env.GASLESS_GAS_PAYER_PRIVATE_KEY || process.env.PRIVATE_KEY || '',
     chainId: parseInt(process.env.GASLESS_CHAIN_ID || process.env.CHAIN_ID || '11155111'),
   },
-  web3Auth: {
-    clientId: process.env.VITE_WEB3AUTH_CLIENT_ID || '',
-    network: process.env.WEB3AUTH_NETWORK || 'sapphire_devnet',
-  },
+
   contracts: {
     predictionMarketAddress: process.env.PREDICTION_MARKET_ADDRESS || '',
     privateKey: process.env.PRIVATE_KEY || '',
@@ -35,9 +32,11 @@ export const config: EnvironmentConfig = {
 
 // Validate required environment variables
 const requiredEnvVars = [
-  'VITE_WEB3AUTH_CLIENT_ID',
-  'SEPOLIA_RPC_URL',
+  'GASLESS_FACTORY_ADDRESS',
+  'GASLESS_GAS_PAYER_PRIVATE_KEY',
+  'PREDICTION_MARKET_ADDRESS',
   'PRIVATE_KEY',
+  'RPC_URL',
 ];
 
 export function validateEnvironment(): void {
@@ -51,9 +50,7 @@ export function validateEnvironment(): void {
     throw new Error('GAS_PAYER_PRIVATE_KEY or PRIVATE_KEY is required');
   }
   
-  if (!config.web3Auth.clientId) {
-    throw new Error('VITE_WEB3AUTH_CLIENT_ID is required');
-  }
+
   
   console.log('✅ Environment configuration validated successfully');
 }

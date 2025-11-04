@@ -146,9 +146,7 @@ PREDICTION_MARKET_ADDRESS=your_deployed_contract_address
 PRIVATE_KEY=your_deployer_private_key
 RPC_URL=https://data-seed-prebsc-1-s1.binance.org:8545
 
-# Web3Auth Configuration
-VITE_WEB3AUTH_CLIENT_ID=your_web3auth_client_id
-WEB3AUTH_NETWORK=sapphire_devnet
+
 ```
 
 **Contracts:**
