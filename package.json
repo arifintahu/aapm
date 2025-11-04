@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "Gasless Prediction Market Betting Platform - Multi-project workspace",
   "private": true,
-  "workspaces": [
-    "contracts",
-    "backend", 
-    "frontend"
-  ],
   "scripts": {
     "install:all": "npm install && npm install --prefix contracts && npm install --prefix backend && npm install --prefix frontend",
     "dev:contracts": "npm run node --prefix contracts",

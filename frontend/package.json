@@ -17,7 +17,6 @@
     "@web3auth/metamask-adapter": "^8.12.4",
     "@web3auth/modal": "^8.12.4",
     "@web3auth/openlogin-adapter": "^8.12.4",
-    "aapm-workspace": "file:..",
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "ethers": "^6.13.4",

@@ -41,7 +41,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "aapm-workspace": "file:..",
     "dotenv": "^17.2.3"
   }
 }
