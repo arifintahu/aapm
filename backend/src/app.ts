@@ -13,6 +13,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Initialize database storage
 async function initializeApp() {
@@ -26,9 +27,9 @@ async function initializeApp() {
 }
 
 // CORS configuration with environment variable support
-const defaultOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
 const customOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()) : [];
-const allowedOrigins = [...defaultOrigins, ...customOrigins];
+const allowedOrigins = [...(isDevelopment ? devOrigins : []), ...customOrigins];
 
 // Middleware
 app.use(cors({
@@ -84,10 +85,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     method: req.method,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
-  });
-
-  // Don't leak error details in production
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  });  
   
   res.status(err.status || 500).json({
     success: false,
