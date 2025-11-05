@@ -66,7 +66,7 @@ export default function Home() {
             Prediction Market
           </h1>
           <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
-            Place bets on future events with gasless transactions using USDC.
+            Place bets on future events with gasless transactions
           </p>
         </div>
 

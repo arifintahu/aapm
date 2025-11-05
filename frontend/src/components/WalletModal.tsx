@@ -224,9 +224,9 @@ export default function WalletModal() {
           <div className="hidden md:block text-center space-y-2">
             <div className="text-sm text-gray-400">Powered by</div>
             <div className="flex justify-center space-x-4 text-xs text-gray-500">
-              <span>🔐 Web3Auth</span>
-              <span>⚡ Smart Account</span>
-              <span>🌐 BSC Testnet</span>
+              <span>⚡ Gasless Transactions</span>
+              <span>🔒 Social login</span>
+              <span>✨ Smart Accounts</span>
             </div>
           </div>
         </div>
