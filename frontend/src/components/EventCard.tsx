@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { PredictionEvent, EventStatus, Outcome } from "@/lib/contracts";
 import { useAppStore } from "@/lib/store";
 import { Calendar, Users, TrendingUp, TrendingDown, Clock, CheckCircle, XCircle } from "lucide-react";
@@ -57,13 +57,18 @@ export default function EventCard({ event }: EventCardProps) {
   const handleBetClick = () => {
     setSelectedEvent(event.id);
     setShowBetModal(true);
-    loadUserBets(event.id);
   };
 
   const currentTime = BigInt(Math.round(Date.now() / 1000));
   const canBet = event.status == EventStatus.Active && currentTime < event.endTime;
   const isResolved = event.status == EventStatus.Resolved;
   const hasUserBets = userEventBets.length > 0;
+
+  useEffect(() => {
+    if (!hasUserBets) {
+      loadUserBets(event.id);
+    }
+  }, [event.id, loadUserBets, hasUserBets]);
 
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-200">

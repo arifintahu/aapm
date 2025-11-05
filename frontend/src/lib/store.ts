@@ -297,12 +297,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Load user bets for a specific event
   loadUserBets: async (eventId: number) => {
     try {
-      const { user, userBets } = get();
-      if (!user || !contractService.isContractsInitialized()) {
+      const { userBets, smartAccount } = get();
+      if (!smartAccount || !contractService.isContractsInitialized()) {
         return;
       }
       
-      const bets = await contractService.getUserBets(eventId, user.address);
+      const bets = await contractService.getUserBets(eventId, smartAccount.address);
       
       set({
         userBets: {
