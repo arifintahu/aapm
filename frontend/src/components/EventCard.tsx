@@ -86,12 +86,12 @@ export default function EventCard({ event }: EventCardProps) {
           </div>
         </div>
         
-        <div className="flex items-center text-sm text-gray-300 flex-wrap">
-          <div className="flex items-center space-x-1">
+        <div className="flex items-start text-sm text-gray-300 flex-col">
+          <div className="flex items-start space-x-1">
             <Calendar className="h-4 w-4" />
             <span>Ends: {formatDate(event.endTime)}</span>
           </div>
-          <div className="flex items-center space-x-1">
+          <div className="flex items-start space-x-1">
             <Users className="h-4 w-4" />
             <span>Pool: {totalPool.toFixed(2)} USDC</span>
           </div>
